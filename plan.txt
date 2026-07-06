@@ -1,0 +1,30 @@
+evaluation.py
+├── parse card strings → (rank, suit)
+├── evaluate 5 cards → comparable tuple
+└── compare hands (implicit - just use > operator on tuples)
+
+simulation.py
+├── generate remaining cards (from deck)
+├── evaluate all scenarios (your hand vs opponent across all possible boards)
+└── count wins → equity %
+
+
+0: (0, rank1, rank2, rank3, rank4, rank5)           High card
+1: (1, pair_rank, kicker1, kicker2, kicker3)        Pair
+2: (2, pair1_rank, pair2_rank, kicker)              Two pair
+3: (3, trips_rank, kicker1, kicker2)                Three of a kind
+4: (4, low_card, ...)                               Straight
+5: (5, rank1, rank2, rank3, rank4, rank5)           Flush
+6: (6, trips_rank, pair_rank)                       Full house
+7: (7, quads_rank, kicker)                          Four of a kind
+8: (8, low_card, ...)      
+                         Straight flush
+0: High card
+1: Pair
+2: Two pair
+3: Three of a kind
+4: Straight
+5: Flush
+6: Full house     
+7: Four of a kind
+8: Straight flush
