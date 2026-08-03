@@ -54,34 +54,42 @@ def evaluate_hand(hand): # making this work for pocket + five community cards
     trip_rank = [rank for rank, freq in rank_freq.items() if freq == 3]
     pairs_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 2], reverse=True)
     singles_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 1], reverse=True)
+
+    # check for highest ranks first
+    # check for straight flush
+
+    if flush: 
+        handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+    if singles_rank[0] - singles_rank[4] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[4] == 2):
+        if flush: # straight flush
+            # will override handtype from flush
+            handtype = (8, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+            if singles_rank[4] == 2:
+                handtype = (8, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
+        else: # straight
+            handtype = (4, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+            if singles_rank[4] == 2:
+                handtype = (4, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
     if len(quad_rank) > 0:
+        # will override handtype from flush
         handtype = (7, quad_rank[0], singles_rank[0])
     elif len(trip_rank) > 0:
         if len(pairs_rank) > 0:
+            # will override handtype from flush
             handtype = (6, trip_rank[0], pairs_rank[0])
         else:
-            handtype = (3, trip_rank[0], singles_rank[0], singles_rank[1])
+            if handtype is None: # make sure this doesn't override straight, flush, or straight flush
+                handtype = (3, trip_rank[0], singles_rank[0], singles_rank[1])
     elif len(pairs_rank) > 0:
-        if len(pairs_rank) > 1:
-            handtype = (2, pairs_rank[0], pairs_rank[1], singles_rank[0])
-        else:
-            handtype = (1, pairs_rank[0], singles_rank[0], singles_rank[1], singles_rank[2])
-    else:
-        if singles_rank[0] - singles_rank[4] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[4] == 2):
-            if flush: # straight flush
-                handtype = (8, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-                if singles_rank[4] == 2:
-                    handtype = (8, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
-            else: # straght
-                handtype = (4, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-                if singles_rank[4] == 2:
-                    handtype = (4, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
-                            
-        else:
-            if flush: # flush
-                handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-            else: # high card
-                handtype = (0, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+        if handtype is None: # make sure this doesn't override anything else above (straight, flush, full house, straight flush, quad)
+            if len(pairs_rank) > 1: 
+                handtype = (2, pairs_rank[0], pairs_rank[1], singles_rank[0])
+            else: 
+                handtype = (1, pairs_rank[0], singles_rank[0], singles_rank[1], singles_rank[2])
+    else: 
+        if handtype is None:  # make sure this doesn't override anything else above (straight, flush, full house, straight flush, quad)
+        # high card
+            handtype = (0, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
     cached_hands[hand_tuple] = handtype
     return cached_hands[hand_tuple]
 
