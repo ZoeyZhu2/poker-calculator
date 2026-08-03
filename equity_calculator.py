@@ -1,5 +1,6 @@
 import evaluation
 import itertools
+import random
 
 # should I use list or set for deck (probably set for quick remove, right?)
 deck = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", "Ac", 
@@ -8,7 +9,7 @@ deck = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
         "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "Ts", "Js", "Qs", "Ks", "As"}
 
     
-def calculate_equity(pocket1, pocket2, community_cards):
+def calculate_equity(pocket1, pocket2, community_cards, num_simulations=-1):
     # pocket1, pocket2: list of 2 cards each (e.g., ['Ah', 'Kd'])
     # community_cards: list of 0-4 cards (e.g., ['5h', '5c', '5d'])
     # returns: float between 0 and 1 (win probability of pocket 1)
@@ -26,19 +27,34 @@ def calculate_equity(pocket1, pocket2, community_cards):
     known_cards = pocket1 + pocket2 + community_cards
     remaining_deck = deck - set(known_cards)
     num_cards_needed = 5 - len(community_cards)
-    futures = itertools.combinations(remaining_deck, num_cards_needed) # returns list of tuples\
+
     wins = 0
     total = 0
-    for future in futures:
-        total += 1
-        board = community_cards + list(future)
-        hand1 = evaluate_from_seven(pocket1 + board)
-        hand2 = evaluate_from_seven(pocket2 + board)
-        if hand1 > hand2:
-            wins += 1
-        if hand1 == hand2:
-            wins += 0.5
 
+    # the exact way
+    if num_simulations == -1:
+        futures = itertools.combinations(remaining_deck, num_cards_needed) # returns list of tuples
+        for future in futures:
+            total += 1
+            board = community_cards + list(future)
+            hand1 = evaluate_from_seven(pocket1 + board)
+            hand2 = evaluate_from_seven(pocket2 + board)
+            if hand1 > hand2:
+                wins += 1
+            if hand1 == hand2:
+                wins += 0.5
+    # faster approximation
+    else:
+        for _ in range(num_simulations):
+            future = random.sample(list(remaining_deck), num_cards_needed)
+            total += 1
+            board = community_cards + future
+            hand1 = evaluate_from_seven(pocket1 + board)
+            hand2 = evaluate_from_seven(pocket2 + board)
+            if hand1 > hand2:
+                wins += 1
+            if hand1 == hand2:
+                wins += 0.5
     return wins/total
 
 # evaluates best five card hand from seven cards
@@ -53,6 +69,23 @@ def evaluate_from_seven(seven_cards):
     return best
             
 # Test cases:
+print("Faster approximations:")
+equity = calculate_equity(['Ah', 'Kh'], ['2d', '3d'], ['5h', '5c', '5d'], 10000)
+print(f"Equity: {equity:.2%}")  # Should be ~90% (AA vs 23o on board 555)
+
+# Coin flip (roughly 50-50)
+equity = calculate_equity(['Ah', 'Kh'], ['Ad', 'Kd'], [], 10000)
+print(f"AK vs AK (no board): {equity:.2%}")  # Should be ~50% (or exactly 50 for ties)
+
+# Dominated hand (roughly 85-15)
+equity = calculate_equity(['Ah', 'Kh'], ['Ac', 'Qc'], ['5h', '5c', '5d'], 10000)
+print(f"AK vs AQ (same suits): {equity:.2%}")  # Should be ~60-65%
+
+# Pocket pair vs high cards
+equity = calculate_equity(['2h', '2d'], ['Ah', 'Kh'], [], 10000)
+print(f"22 vs AK (no board): {equity:.2%}")  # Should be ~45-55%
+
+print("Exact approximations:")
 equity = calculate_equity(['Ah', 'Kh'], ['2d', '3d'], ['5h', '5c', '5d'])
 print(f"Equity: {equity:.2%}")  # Should be ~90% (AA vs 23o on board 555)
 
