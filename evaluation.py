@@ -1,5 +1,6 @@
 from collections import Counter
 
+# Question: can I make this caching permanent?
 # caching to reduce computation time as I run this a lot
 parsed_cards = {}
 cached_hands = {}
@@ -18,24 +19,22 @@ def parse_card(card:str):
     parsed_cards[card] = (rank, suit)
     return parsed_cards[card]
 
-def parse_cards(cards:str):
-    # cards will be of the form "card1 card2..." where all cards are split by one space
-    # the cards will be of the form "10s" (rank suit)
-    # Throw an error if the hand is not of the correct form
-    cards = cards.strip()
-    cards_unparsed = cards.split()
+def parse_cards(cards):
+    # indiv cards will be of the form "Ts" (rank suit)
+    # cards will be a list of cards
     cards_parsed = []
-    for card in cards_unparsed:
+    for card in cards:
         cards_parsed.append(parse_card(card))
     return cards_parsed
 
-def evaluate_hand(hand:str):
-    # hand will be of the form "card1 card2 card3 card4 card5" where all cards are split by one space
-    # the cards will be of the form "10s" (rank suit)
+def evaluate_hand(hand): # making this work for pocket + five community cards
+    # hand will be a list of cards
+    # the cards will be of the form "Ts" (rank suit)
     # Throw an error if the hand is not of the correct form
-    hand = hand.strip()
-    if hand in cached_hands:
-        return cached_hands[hand]
+    hand_list = sorted(hand) # ensures resulting tuples are the same
+    hand_tuple = sorted(hand_list)
+    if hand_tuple in cached_hands:
+        return cached_hands[hand_tuple]
     cards_parsed = parse_cards(hand)
 
     suits = [card[1] for card in cards_parsed]
@@ -68,7 +67,7 @@ def evaluate_hand(hand:str):
         else:
             handtype = (1, pairs_rank[0], singles_rank[0], singles_rank[1], singles_rank[2])
     else:
-        if singles_rank[0] - singles_rank[-1] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[4] == 2):
+        if singles_rank[0] - singles_rank[4] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[4] == 2):
             if flush: # straight flush
                 handtype = (8, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
                 if singles_rank[4] == 2:
@@ -83,8 +82,8 @@ def evaluate_hand(hand:str):
                 handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
             else: # high card
                 handtype = (0, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-    cached_hands[hand] = handtype
-    return cached_hands[hand]
+    cached_hands[hand_tuple] = handtype
+    return cached_hands[hand_tuple]
 
 # Test cases
 print(evaluate_hand("2h 2d As Kc Qh"))  # Pair with 3 kickers
