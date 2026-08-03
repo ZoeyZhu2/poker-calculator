@@ -84,25 +84,6 @@ print(evaluate_hand("9h 8d 7c 6s 5h"))  # Straight
 print(evaluate_hand("Ah 5d 4c 3s 2h"))  # Wheel (5-high straight)
 
 def compare_hands(hand1: str, hand2: str):
-    # generally, high to low order
-    # 0: (0, rank1, rank2, rank3, rank4, rank5)           High card
-    # 1: (1, pair_rank, kicker1, kicker2, kicker3)        Pair
-    # 2: (2, highpair_rank, lowpair_rank, kicker)              Two pair
-    # 3: (3, trips_rank, kicker1, kicker2)                Three of a kind
-    # 4: (4, low_card, ...)                               Straight
-    # 5: (5, rank1, rank2, rank3, rank4, rank5)           Flush
-    # 6: (6, trips_rank, pair_rank)                       Full house
-    # 7: (7, quads_rank, kicker)                          Four of a kind
-    # 8: (8, high_card, ...)      
-
-    # 0: High card
-    # 1: Pair
-    # 2: Two pair
-    # 3: Three of a kind
-    # 4: Straight
-    # 5: Flush
-    # 6: Full house     
-    # 7: Four of a kind
-    # 8: Straight flush
+    # since evaluated hands are tuples with rank first, then relevant card values in descending order, I can do direct comparison hand1 > hand2. Thus, I will not be using this function.
     pass
     # Question: how to throw errors
