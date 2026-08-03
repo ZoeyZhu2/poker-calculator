@@ -18,6 +18,17 @@ def parse_card(card:str):
     parsed_cards[card] = (rank, suit)
     return parsed_cards[card]
 
+def parse_cards(cards:str):
+    # cards will be of the form "card1 card2..." where all cards are split by one space
+    # the cards will be of the form "10s" (rank suit)
+    # Throw an error if the hand is not of the correct form
+    cards = cards.strip()
+    cards_unparsed = cards.split()
+    cards_parsed = []
+    for card in cards_unparsed:
+        cards_parsed.append(parse_card(card))
+    return cards_parsed
+
 def evaluate_hand(hand:str):
     # hand will be of the form "card1 card2 card3 card4 card5" where all cards are split by one space
     # the cards will be of the form "10s" (rank suit)
@@ -25,10 +36,7 @@ def evaluate_hand(hand:str):
     hand = hand.strip()
     if hand in cached_hands:
         return cached_hands[hand]
-    cards_unparsed = hand.split()
-    cards_parsed = []
-    for card in cards_unparsed:
-        cards_parsed.append(parse_card(card))
+    cards_parsed = parse_cards(hand)
 
     suits = [card[1] for card in cards_parsed]
     num_h = suits.count("h")
