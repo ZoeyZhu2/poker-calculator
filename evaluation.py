@@ -27,12 +27,16 @@ def parse_cards(cards):
         cards_parsed.append(parse_card(card))
     return cards_parsed
 
-def evaluate_hand(hand): # making this work for pocket + five community cards
+def evaluate_hand(hand): # can evaluate 5
     # hand will be a list of cards
     # the cards will be of the form "Ts" (rank suit)
     # Throw an error if the hand is not of the correct form
+    if len(hand) < 5:
+        raise ValueError(f"Need 5+ cards, got {len(hand)}")
+    if len(hand) > 5:
+        raise ValueError(f"Too many cards: {len(hand)}")
     hand_list = sorted(hand) # ensures resulting tuples are the same
-    hand_tuple = sorted(hand_list)
+    hand_tuple = tuple(hand_list)
     if hand_tuple in cached_hands:
         return cached_hands[hand_tuple]
     cards_parsed = parse_cards(hand)
@@ -55,22 +59,26 @@ def evaluate_hand(hand): # making this work for pocket + five community cards
     pairs_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 2], reverse=True)
     singles_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 1], reverse=True)
 
-    # check for highest ranks first
-    # check for straight flush
+    handtype = None
 
     if flush: 
         handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-    if singles_rank[0] - singles_rank[4] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[4] == 2):
-        if flush: # straight flush
-            # will override handtype from flush
-            handtype = (8, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-            if singles_rank[4] == 2:
-                handtype = (8, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
-        else: # straight
-            handtype = (4, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-            if singles_rank[4] == 2:
-                handtype = (4, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
-    if len(quad_rank) > 0:
+    if len(singles_rank) == 5:
+        if singles_rank[0] - singles_rank[-1] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[-1] == 2):
+            if flush: # straight flush
+                # will override handtype from flush
+                handtype = (8, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+                if singles_rank[4] == 2:
+                    handtype = (8, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
+            else: # straight
+                handtype = (4, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+                if singles_rank[4] == 2:
+                    handtype = (4, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
+        else: 
+            if handtype is None:  # make sure this doesn't override flush
+            # high card
+                handtype = (0, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+    elif len(quad_rank) > 0:
         # will override handtype from flush
         handtype = (7, quad_rank[0], singles_rank[0])
     elif len(trip_rank) > 0:
@@ -86,17 +94,14 @@ def evaluate_hand(hand): # making this work for pocket + five community cards
                 handtype = (2, pairs_rank[0], pairs_rank[1], singles_rank[0])
             else: 
                 handtype = (1, pairs_rank[0], singles_rank[0], singles_rank[1], singles_rank[2])
-    else: 
-        if handtype is None:  # make sure this doesn't override anything else above (straight, flush, full house, straight flush, quad)
-        # high card
-            handtype = (0, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
     cached_hands[hand_tuple] = handtype
     return cached_hands[hand_tuple]
 
 # Test cases
-print(evaluate_hand("2h 2d As Kc Qh"))  # Pair with 3 kickers
-print(evaluate_hand("9h 8d 7c 6s 5h"))  # Straight
-print(evaluate_hand("Ah 5d 4c 3s 2h"))  # Wheel (5-high straight)
+# print(evaluate_hand(['2h', '2d', 'As', 'Kc', 'Qh']))  # List
+# print(evaluate_hand(['9h', '8d', '7c', '6s', '5h']))  # Straight
+# print(evaluate_hand(['Ah', '5d', '4c', '3s', '2h']))  # Wheel
+
 
 def compare_hands(hand1: str, hand2: str):
     # since evaluated hands are tuples with rank first, then relevant card values in descending order, I can do direct comparison hand1 > hand2. Thus, I will not be using this function.
