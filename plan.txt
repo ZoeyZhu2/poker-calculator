@@ -8,17 +8,17 @@ simulation.py
 ├── evaluate all scenarios (your hand vs opponent across all possible boards)
 └── count wins → equity %
 
-
+generally, high to low order
 0: (0, rank1, rank2, rank3, rank4, rank5)           High card
 1: (1, pair_rank, kicker1, kicker2, kicker3)        Pair
-2: (2, pair1_rank, pair2_rank, kicker)              Two pair
+2: (2, highpair_rank, lowpair_rank, kicker)              Two pair
 3: (3, trips_rank, kicker1, kicker2)                Three of a kind
 4: (4, low_card, ...)                               Straight
 5: (5, rank1, rank2, rank3, rank4, rank5)           Flush
 6: (6, trips_rank, pair_rank)                       Full house
 7: (7, quads_rank, kicker)                          Four of a kind
-8: (8, low_card, ...)      
-                         Straight flush
+8: (8, high_card, ...)      
+
 0: High card
 1: Pair
 2: Two pair

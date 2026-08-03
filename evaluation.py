@@ -1,5 +1,6 @@
-# caching to reduce computation time as I run this a lot
+from collections import Counter
 
+# caching to reduce computation time as I run this a lot
 parsed_cards = {}
 cached_hands = {}
 rank_map = {"2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "T": 10, "J": 11, "Q": 12, "K": 13, "A": 14}
@@ -28,8 +29,7 @@ def evaluate_hand(hand:str):
     cards_parsed = []
     for card in cards_unparsed:
         cards_parsed.append(parse_card(card))
-    ranks = [card[0] for card in cards_parsed]
-    ranks = sorted(ranks)
+
     suits = [card[1] for card in cards_parsed]
     num_h = suits.count("h")
     num_d = suits.count("d")
@@ -38,87 +38,71 @@ def evaluate_hand(hand:str):
     flush = False
     if num_h == 5 or num_d == 5 or num_s == 5 or num_c == 5:
         flush = True
-    ranks = tuple(ranks)
-    suits = tuple(suits)
-    # count frequency of cards. Note that ranks are sorted in ascending order
-    n1 = ranks.count(ranks[0])
-    n2 = ranks.count(ranks[1])
-    n3 =ranks.count(ranks[2])
-    n4 =ranks.count(ranks[3])
-    n5 = ranks.count(ranks[4])
-    # if every card has a frequency of 1: straight flush, flush, straight, or high card
-    if n1 == n2 == n3 == n4 == n5: 
-        if ranks[4] - ranks[0] == 4 or (ranks[3] - ranks[0] == 3 and ranks[4] == 14): # must be a straight because no repeated ranks
-            if flush: #straight flush
-                handtype = (8, ranks[-1], ranks[-2], ranks[2], ranks[1], ranks[0])
-            else: # straight
-                handtype = (4, ranks[-1], ranks[-2], ranks[2], ranks[1], ranks[0])
-        elif flush: #flush
-            handtype = (4, ranks[-1], ranks[-2], ranks[2], ranks[1], ranks[0])
-        else: # high card
-            handtype = (0, ranks[-1], ranks[-2], ranks[2], ranks[1], ranks[0])
-        # just be careful when I later compare hands to check the first and last cards in the straight for wheels
 
-    # if quad
-    if n1 == 4: 
-        handtype = (7, ranks[0], ranks[4])
-    if n5 == 4:
-        handtype = (7, ranks[4], ranks[0])
-
-    # if there"s a triple: either full house or set
-    if n1 == 3:
-        if n5 == 2:
-            handtype = (6, ranks[0], ranks[4])
+    ranks = [card[0] for card in cards_parsed]
+    ranks = sorted(ranks)
+    rank_freq = Counter(ranks) # creates dict of element: frequency
+    freq_list = sorted(rank_freq.values(), reverse=True)
+    quad_rank = [rank for rank, freq in rank_freq.items() if freq == 4]
+    trip_rank = [rank for rank, freq in rank_freq.items() if freq == 3]
+    pairs_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 2], reverse=True)
+    singles_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 1], reverse=True)
+    if len(quad_rank) > 0:
+        handtype = (7, quad_rank[0], singles_rank[0])
+    elif len(trip_rank) > 0:
+        if len(pairs_rank) > 0:
+            handtype = (6, trip_rank[0], pairs_rank[0])
         else:
-            handtype = (3, ranks[0], ranks[4], ranks[3])
-    if n5 == 3:
-        if n1 == 2:
-            handtype = (6, ranks[4], ranks[0])
+            handtype = (3, trip_rank[0], singles_rank[0], singles_rank[1])
+    elif len(pairs_rank) > 0:
+        if len(pairs_rank) > 1:
+            handtype = (2, pairs_rank[0], pairs_rank[1], singles_rank[0])
         else:
-            handtype = (3, ranks[4], ranks[1], ranks[0])
-    if n2 == 3: # must be a set
-        handtype = (3, ranks[1], ranks[4], ranks[0])
-   
-    # if there"s a pair: full house, two pair, or one pair
-    # already checked for full house, so eliminate that now...
-    if n1 == 2 and n3 != 3: # if a pair and not another set
-        if n3 == 2: # two pair
-            handtype = (2, ranks[2], ranks[0], ranks[4])
-        elif n4 == 2: # two pair
-            handtype = (2, n4, ranks[0], ranks[2])
-        else: # one pair
-            handtype = (1, ranks[0], ranks[4], ranks[3], ranks[2])
-    if n5 == 2 and n1 != 3: # if a pair and not another set
-        if n3 == 2: # two pair
-            handtype = (2, ranks[4], ranks[2], ranks[0])
-        elif n1 == 2: # two pair
-            handtype = (2, ranks[4], ranks[0], ranks[2])
-        else: # one pair
-            handtype = (1, ranks[4], ranks[2], ranks[1], ranks[0])
-    if n3 == 2: # full house not possible here
-        if n5 == 2: # two pair
-            handtype = (2, ranks[4], ranks[2], ranks[0])
-        elif n1 == 2: # two pair
-            handtype = (2, ranks[2], ranks[0], ranks[4])
-        elif n4 == 2: # n3 and n4 part of same pair
-            handtype = (1, ranks[2], ranks[4], ranks[1], ranks[0]) 
-        else: # n2 and n3 part of same pair
-            handtype = (1, ranks[2], ranks[4], ranks[3], ranks[0])
-
-    cached_hands[hand] = handtype, ranks, suits
+            handtype = (1, pairs_rank[0], singles_rank[0], singles_rank[1], singles_rank[2])
+    else:
+        if singles_rank[0] - singles_rank[-1] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[4] == 2):
+            if flush: # straight flush
+                handtype = (8, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+                if singles_rank[4] == 2:
+                    handtype = (8, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
+            else: # straght
+                handtype = (4, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+                if singles_rank[4] == 2:
+                    handtype = (4, singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4], singles_rank[0])
+                            
+        else:
+            if flush: # flush
+                handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+            else: # high card
+                handtype = (0, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
+    cached_hands[hand] = handtype
     return cached_hands[hand]
 
+# Test cases
+print(evaluate_hand("2h 2d As Kc Qh"))  # Pair with 3 kickers
+print(evaluate_hand("9h 8d 7c 6s 5h"))  # Straight
+print(evaluate_hand("Ah 5d 4c 3s 2h"))  # Wheel (5-high straight)
+
 def compare_hands(hand1: str, hand2: str):
-    # use evaluate hand?
+    # generally, high to low order
     # 0: (0, rank1, rank2, rank3, rank4, rank5)           High card
     # 1: (1, pair_rank, kicker1, kicker2, kicker3)        Pair
-    # 2: (2, pair1_rank, pair2_rank, kicker)              Two pair
+    # 2: (2, highpair_rank, lowpair_rank, kicker)              Two pair
     # 3: (3, trips_rank, kicker1, kicker2)                Three of a kind
     # 4: (4, low_card, ...)                               Straight
     # 5: (5, rank1, rank2, rank3, rank4, rank5)           Flush
     # 6: (6, trips_rank, pair_rank)                       Full house
     # 7: (7, quads_rank, kicker)                          Four of a kind
-    # 8: (8, low_card, ...)
+    # 8: (8, high_card, ...)      
 
-
-# Question: how to throw errors?
+    # 0: High card
+    # 1: Pair
+    # 2: Two pair
+    # 3: Three of a kind
+    # 4: Straight
+    # 5: Flush
+    # 6: Full house     
+    # 7: Four of a kind
+    # 8: Straight flush
+    pass
+    # Question: how to throw errors
