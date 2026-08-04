@@ -98,43 +98,59 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
         for future in futures:
             total += 1
             board = community_cards + list(future)
-            best_rank = None
-            num_best = 0
+            all_hand_ranks = list()
             current_wins = np.zeros(len(pockets_list))
             for index, pocket in enumerate(pockets_list):
                 hand_rank = evaluate_from_seven(pocket + board)
-                if best_rank is None or hand_rank >= best_rank:
-                    num_best += 1
-                    if hand_rank > best_rank:
-                        num_best = 1
-                        current_wins[:] = 0
-                        current_wins[index] += 1
-                    if hand_rank == best_rank:
-                        current_wins[index] += 1
-                        current_wins[:] = current_wins[:]/num_best # divide current values by num_best
-                    best_rank = hand_rank
+                all_hand_ranks.append(hand_rank)
+                # if best_rank is None or hand_rank >= best_rank:
+                #     num_best += 1
+                #     if hand_rank > best_rank:
+                #         num_best = 1
+                #         current_wins[:] = 0
+                #         current_wins[index] += 1
+                #     if hand_rank == best_rank:
+                #         current_wins[index] += 1
+                #         current_wins[:] = current_wins[:]/num_best # divide current values by num_best
+                #     best_rank = hand_rank
+            best_rank = max(all_hand_ranks)
+            best_rank_indices = list()
+            for index, rank in enumerate(all_hand_ranks):
+                if rank == best_rank:
+                    best_rank_indices.append(index)
+            equity = 1.0 / len(best_rank_indices)
+            for index in best_rank_indices:
+                current_wins[index] = equity
             wins = wins + current_wins
     # faster approximation
     else:
         for _ in range(num_simulations):
             future = random.sample(list(remaining_deck), num_cards_needed)
             total += 1
-            board = community_cards + future
-            best_rank = None
-            num_best = 0
+            board = community_cards + list(future)
+            all_hand_ranks = list()
             current_wins = np.zeros(len(pockets_list))
             for index, pocket in enumerate(pockets_list):
                 hand_rank = evaluate_from_seven(pocket + board)
-                if best_rank is None or hand_rank >= best_rank:
-                    num_best += 1
-                    if hand_rank > best_rank:
-                        num_best = 1
-                        current_wins[:] = 0
-                        current_wins[index] += 1
-                    if hand_rank == best_rank:
-                        current_wins[index] += 1
-                        current_wins[:] = current_wins[:]/num_best # divide current values by num_best
-                    best_rank = hand_rank
+                all_hand_ranks.append(hand_rank)
+                # if best_rank is None or hand_rank >= best_rank:
+                #     num_best += 1
+                #     if hand_rank > best_rank:
+                #         num_best = 1
+                #         current_wins[:] = 0
+                #         current_wins[index] += 1
+                #     if hand_rank == best_rank:
+                #         current_wins[index] += 1
+                #         current_wins[:] = current_wins[:]/num_best # divide current values by num_best
+                #     best_rank = hand_rank
+            best_rank = max(all_hand_ranks)
+            best_rank_indices = list()
+            for index, rank in enumerate(all_hand_ranks):
+                if rank == best_rank:
+                    best_rank_indices.append(index)
+            equity = 1.0 / len(best_rank_indices)
+            for index in best_rank_indices:
+                current_wins[index] = equity
             wins = wins + current_wins
     return wins/total
 
