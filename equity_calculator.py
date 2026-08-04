@@ -71,7 +71,7 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
         best_indices = list() # implement a queue
         best_hand = None
         for index, pocket in enumerate(pockets_list):
-            evaluated_hand = evaluation.evaluate_hand(pocket + community_cards)
+            evaluated_hand = evaluation.evaluate_from_seven(pocket + community_cards)
             evaluated_hands.append(evaluated_hand)
             if best_hand is None or evaluated_hand >= best_hand:
                 if evaluated_hand > best_hand:
@@ -158,17 +158,17 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
             wins = wins + current_wins
     return wins/total
 
-# Test
-# 3 players, flat board
-equity = calculate_equity(
-    [['Ah', 'Kh'], ['Ad', 'Kd'], ['2c', '3c']],
-    ['5h', '5c', '5d']
-)
-print(f"Calculated equity: {equity}; expected equity: [0.35, 0.35, 0.30]")
+# # Test
+# # 3 players, flat board
+# equity = calculate_equity(
+#     [['Ah', 'Kh'], ['Ad', 'Kd'], ['2c', '3c']],
+#     ['5h', '5c', '5d']
+# )
+# print(f"Calculated equity: {equity}; expected equity: [0.35, 0.35, 0.30]")
 
-# Same pocket (tie)
-equity = calculate_equity(
-    [['Ah', 'Kh'], ['Ah', 'Kh']],
-    ['5h', '5c', '5d']
-)
-print(f"Calculated equity: {equity}; expected equity: [0.5, 0.5]")
+# # Same pocket (tie)
+# equity = calculate_equity(
+#     [['Ah', 'Kh'], ['Ah', 'Kh']],
+#     ['5h', '5c', '5d']
+# )
+# print(f"Calculated equity: {equity}; expected equity: [0.5, 0.5]")
