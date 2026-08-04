@@ -74,7 +74,7 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
             evaluated_hand = evaluation.evaluate_from_seven(pocket + community_cards)
             evaluated_hands.append(evaluated_hand)
             if best_hand is None or evaluated_hand >= best_hand:
-                if evaluated_hand > best_hand:
+                if best_hand is not None and evaluated_hand > best_hand:
                     best_indices.clear()
                 best_indices.append(index)
                 best_hand = evaluated_hand
