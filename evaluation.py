@@ -1,4 +1,6 @@
 from collections import Counter
+import itertools
+
 
 # Question: can I make this caching permanent?
 # caching to reduce computation time as I run this a lot
@@ -103,7 +105,13 @@ def evaluate_hand(hand): # can evaluate 5
 # print(evaluate_hand(['Ah', '5d', '4c', '3s', '2h']))  # Wheel
 
 
-def compare_hands(hand1: str, hand2: str):
-    # since evaluated hands are tuples with rank first, then relevant card values in descending order, I can do direct comparison hand1 > hand2. Thus, I will not be using this function.
-    pass
-    # Question: how to throw errors
+# evaluates best five card hand from seven cards
+def evaluate_from_seven(seven_cards):
+    # seven_cards is a list of seven cards
+    five_card_combos = itertools.combinations(seven_cards, 5)
+    best = None
+    for combo in five_card_combos:
+        result = evaluate_hand(combo)
+        if best is None or result > best:
+            best = result
+    return best
