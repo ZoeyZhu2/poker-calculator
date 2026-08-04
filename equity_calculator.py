@@ -38,8 +38,8 @@ deck = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
 #         for future in futures:
 #             total += 1
 #             board = community_cards + list(future)
-#             hand1 = evaluate_from_seven(pocket1 + board)
-#             hand2 = evaluate_from_seven(pocket2 + board)
+#             hand1 = evaluation.evaluate_from_seven(pocket1 + board)
+#             hand2 = evaluation.evaluate_from_seven(pocket2 + board)
 #             if hand1 > hand2:
 #                 wins += 1
 #             if hand1 == hand2:
@@ -50,8 +50,8 @@ deck = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
 #             future = random.sample(list(remaining_deck), num_cards_needed)
 #             total += 1
 #             board = community_cards + future
-#             hand1 = evaluate_from_seven(pocket1 + board)
-#             hand2 = evaluate_from_seven(pocket2 + board)
+#             hand1 = evaluation.evaluate_from_seven(pocket1 + board)
+#             hand2 = evaluation.evaluate_from_seven(pocket2 + board)
 #             if hand1 > hand2:
 #                 wins += 1
 #             if hand1 == hand2:
@@ -83,25 +83,29 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
             equities_list[index] = equity
         return equities_list        
 
-    known_cards = community_cards
+    known_cards = list()
     for pocket in pockets_list:
         known_cards.extend(pocket)
+    known_cards.extend(community_cards)
     remaining_deck = deck - set(known_cards) # this is a set
     num_cards_needed = 5 - len(community_cards)
+    print(f"community_cards: {community_cards}, len: {len(community_cards)}")
+    print(f"num_cards_needed: {num_cards_needed}")
+    print(f"remaining_deck size: {len(remaining_deck)}")
 
     wins = np.zeros(len(pockets_list))
     total = 0
 
     # the exact way
     if num_simulations == -1:
-        futures = itertools.combinations(remaining_deck, num_cards_needed) # returns list of tuples
+        futures = itertools.combinations(list(remaining_deck), num_cards_needed) # returns list of tuples
         for future in futures:
             total += 1
             board = community_cards + list(future)
             all_hand_ranks = list()
             current_wins = np.zeros(len(pockets_list))
             for index, pocket in enumerate(pockets_list):
-                hand_rank = evaluate_from_seven(pocket + board)
+                hand_rank = evaluation.evaluate_from_seven(pocket + board)
                 all_hand_ranks.append(hand_rank)
                 # if best_rank is None or hand_rank >= best_rank:
                 #     num_best += 1
@@ -131,7 +135,7 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
             all_hand_ranks = list()
             current_wins = np.zeros(len(pockets_list))
             for index, pocket in enumerate(pockets_list):
-                hand_rank = evaluate_from_seven(pocket + board)
+                hand_rank = evaluation.evaluate_from_seven(pocket + board)
                 all_hand_ranks.append(hand_rank)
                 # if best_rank is None or hand_rank >= best_rank:
                 #     num_best += 1
@@ -154,46 +158,17 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
             wins = wins + current_wins
     return wins/total
 
-# evaluates best five card hand from seven cards
-def evaluate_from_seven(seven_cards):
-    # seven_cards is a list of seven cards
-    five_card_combos = itertools.combinations(seven_cards, 5)
-    best = None
-    for combo in five_card_combos:
-        result = evaluation.evaluate_hand(combo)
-        if best is None or result > best:
-            best = result
-    return best
-            
-# Test cases:
-print("Faster approximations:")
-equity = calculate_equity(['Ah', 'Kh'], ['2d', '3d'], ['5h', '5c', '5d'], 10000)
-print(f"Equity: {equity:.2%}")  # Should be ~90% (AA vs 23o on board 555)
+# Test
+# 3 players, flat board
+equity = calculate_equity(
+    [['Ah', 'Kh'], ['Ad', 'Kd'], ['2c', '3c']],
+    ['5h', '5c', '5d']
+)
+print(f"Calculated equity: {equity}; expected equity: [0.35, 0.35, 0.30]")
 
-# Coin flip (roughly 50-50)
-equity = calculate_equity(['Ah', 'Kh'], ['Ad', 'Kd'], [], 10000)
-print(f"AK vs AK (no board): {equity:.2%}")  # Should be ~50% (or exactly 50 for ties)
-
-# Dominated hand (roughly 85-15)
-equity = calculate_equity(['Ah', 'Kh'], ['Ac', 'Qc'], ['5h', '5c', '5d'], 10000)
-print(f"AK vs AQ (same suits): {equity:.2%}")  # Should be ~60-65%
-
-# Pocket pair vs high cards
-equity = calculate_equity(['2h', '2d'], ['Ah', 'Kh'], [], 10000)
-print(f"22 vs AK (no board): {equity:.2%}")  # Should be ~45-55%
-
-print("Exact approximations:")
-equity = calculate_equity(['Ah', 'Kh'], ['2d', '3d'], ['5h', '5c', '5d'])
-print(f"Equity: {equity:.2%}")  # Should be ~90% (AA vs 23o on board 555)
-
-# Coin flip (roughly 50-50)
-equity = calculate_equity(['Ah', 'Kh'], ['Ad', 'Kd'], [])
-print(f"AK vs AK (no board): {equity:.2%}")  # Should be ~50% (or exactly 50 for ties)
-
-# Dominated hand (roughly 85-15)
-equity = calculate_equity(['Ah', 'Kh'], ['Ac', 'Qc'], ['5h', '5c', '5d'])
-print(f"AK vs AQ (same suits): {equity:.2%}")  # Should be ~60-65%
-
-# Pocket pair vs high cards
-equity = calculate_equity(['2h', '2d'], ['Ah', 'Kh'], [])
-print(f"22 vs AK (no board): {equity:.2%}")  # Should be ~45-55%
+# Same pocket (tie)
+equity = calculate_equity(
+    [['Ah', 'Kh'], ['Ah', 'Kh']],
+    ['5h', '5c', '5d']
+)
+print(f"Calculated equity: {equity}; expected equity: [0.5, 0.5]")
