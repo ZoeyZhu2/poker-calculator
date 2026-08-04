@@ -51,10 +51,10 @@ def hand_name_to_cards(hand):
     if len(hand) == 2:
         suit_combos = itertools.combinations(suits, 2)
         for suit1, suit2 in suit_combos:
-            cards.extend([hand[0] + suit1, hand[0] + suit2])
+            cards.append([hand[0] + suit1, hand[0] + suit2])
     elif hand[2] == "s":
         for suit in suits:
-            cards.extend([hand[0] + suit, hand[1] + suit])
+            cards.append([hand[0] + suit, hand[1] + suit])
     else:
         for suit1 in suits:
             for suit2 in suits:
