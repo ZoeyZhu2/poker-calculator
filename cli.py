@@ -28,8 +28,12 @@ def main():
 
         if not handle_status(update_folds(poker_game), poker_game):
             break
-
+        
         own_position = poker_game.get_own_pos()
+        next_round = input("Next round (Y/N): ").strip()
+        if next_round == "N":
+            break
+
         
 
 def update_folds(poker_game):
