@@ -63,11 +63,8 @@ def evaluate_hand(hand): # can evaluate 5
 
     handtype = None
 
-    if flush: 
-        if len(singles_rank) >= 5:
-            handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
-        else:
-            handtype = None
+    if len(singles_rank) == 5 and flush: 
+        handtype = (5, singles_rank[0], singles_rank[1], singles_rank[2], singles_rank[3], singles_rank[4])
     if len(singles_rank) == 5:
         if singles_rank[0] - singles_rank[-1] == 4 or (singles_rank[0] == 14 and singles_rank[1] == 5 and singles_rank[-1] == 2):
             if flush: # straight flush
