@@ -68,6 +68,9 @@ class PokerGame:
             self.own_pos = positions[(positions.index(self.own_pos) + 1) % 9]
         self.board_cards.clear()
 
+    def get_own_pos(self):
+        return self.own_pos
+
 
 # Test the CLI game
 
