@@ -71,25 +71,25 @@ class PokerGame:
 
 # Test the CLI game
 
-game = PokerGame(['Ah', 'Kh'], 'BTN', 3, [])
-print(f"3 players, BTN position, no board")
-print(f"Your hand: AKs")
-print(f"Equity: {game.get_equity():.2%}")
+# game = PokerGame(['Ah', 'Kh'], 'BTN', 3, [])
+# print(f"3 players, BTN position, no board")
+# print(f"Your hand: AKs")
+# print(f"Equity: {game.get_equity():.2%}")
 
-game.add_board_card('5h')
-game.add_board_card('5c')
-game.add_board_card('5d')
-print(f"\nAdded flop: 5h 5c 5d")
-print(f"Equity: {game.get_equity():.2%}")
+# game.add_board_card('5h')
+# game.add_board_card('5c')
+# game.add_board_card('5d')
+# print(f"\nAdded flop: 5h 5c 5d")
+# print(f"Equity: {game.get_equity():.2%}")
 
-game.fold_player('SB')
-print(f"\nSB folded (2 players left)")
-print(f"Equity: {game.get_equity():.2%}")
+# game.fold_player('SB')
+# print(f"\nSB folded (2 players left)")
+# print(f"Equity: {game.get_equity():.2%}")
 
-game.add_board_card('2s')
-print(f"\nAdded turn: 2s")
-print(f"Equity: {game.get_equity():.2%}")
+# game.add_board_card('2s')
+# print(f"\nAdded turn: 2s")
+# print(f"Equity: {game.get_equity():.2%}")
 
-game.add_board_card('3c')
-print(f"\nAdded river: 3c")
-print(f"Equity: {game.get_equity():.2%}")
+# game.add_board_card('3c')
+# print(f"\nAdded river: 3c")
+# print(f"Equity: {game.get_equity():.2%}")
