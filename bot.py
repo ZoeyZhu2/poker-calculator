@@ -3,13 +3,13 @@ import random
 class bot():
 
     def __init__(self, volatility, aggressiveness, stack):
-        # volatility is a float from 0 to 1 measure percentage it can swing from playing according to target ev
+        # volatility is a float from 0 to 1 measure percentage it can swing from playing according to target ev based on big_blind
         # aggressiveness is a float from 0 to 1 which is min equity needed to raise
         self.volatility = volatility
         self.aggressiveness = aggressiveness
         self.stack = stack
 
-    def decision(self, equity, pot, cost_to_call):
+    def decision(self, equity, pot, cost_to_call, big_blind):
         if self.stack < 0:
             return "exit"
         if self.stack == 0:
@@ -18,7 +18,8 @@ class bot():
         cost_to_call = min(cost_to_call, self.stack)  # cap first
 
         ev = equity * (pot + cost_to_call) - cost_to_call
-        adjusted_ev = random.uniform(ev - abs(ev) * self.volatility, ev + abs(ev) * self.volatility)
+        noise = random.uniform(-big_blind * self.volatility, big_blind * self.volatility)
+        adjusted_ev = ev + noise
         if adjusted_ev <= 0:
             return "fold", 0
         elif equity > self.aggressiveness:
