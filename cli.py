@@ -62,3 +62,6 @@ def handle_status(status, poker_game):
         poker_game.new_round(own_hand, num_players)
         return False
     return True
+
+if __name__ == "__main__":
+    main()
