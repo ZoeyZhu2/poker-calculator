@@ -96,6 +96,9 @@ def evaluate_hand(hand): # can evaluate 5
                 handtype = (2, pairs_rank[0], pairs_rank[1], singles_rank[0])
             else: 
                 handtype = (1, pairs_rank[0], singles_rank[0], singles_rank[1], singles_rank[2])
+    if handtype is None:
+        print(f"FAIL: hand={hand}")
+        print(f"  singles={singles_rank}, pairs={pairs_rank}, trips={trip_rank}, quads={quad_rank}")
     cached_hands[hand_tuple] = handtype
     return cached_hands[hand_tuple]
 
