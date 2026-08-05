@@ -15,10 +15,11 @@ class PokerGame:
         self.folded = set()
 
     def get_equity(self):
+        heads_up = (self.num_players == 2)
         ranges = dict()
         for key, value in self.positions_in.items():
             if value is True:
-                ranges[key] = position_ranges.get_range_hands(key)
+                ranges[key] = position_ranges.get_range_hands(key, heads_up=heads_up)
         pocket_list = [self.own_hand]
         selected_cards = set()
         for key, value in ranges.items():
@@ -50,7 +51,9 @@ class PokerGame:
 
 
     def populate_positions(self, num_players):
-        self.positions_in = {"UTG": False, "UTG+1": False, "UTG+2": False, "LJ": False, "HJ": False, "CO": False, "BTN": True, "SB": True, "BB": True}
+        self.positions_in = {"UTG": False, "UTG+1": False, "UTG+2": False, "LJ": False, "HJ": False, "CO": False, "BTN": True, "SB": False, "BB": True}
+        if num_players > 2:
+            self.positions_in["SB"] = True
         if num_players > 3:
             self.positions_in["UTG"] = True
         if num_players > 4: 

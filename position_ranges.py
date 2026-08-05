@@ -12,6 +12,11 @@ DEFAULT_RANGES = {
     'BB': 0.70        # Can call cheap
 }
 
+HEADS_UP_RANGES = {
+    'BTN': 0.75,   # BTN/SB opens ~75% of hands heads-up
+    'BB': 0.85     # BB defends very wide against that
+}
+
 # from https://www.preflophands.com/
 HAND_STRENGTH = ["AA", "KK", "QQ", "AKs", "JJ", "AQs", "KQs", "AJs", "KJs", "TT", 
                  "AKo", "ATs", "QJs", "KTs", "QTs", "JTs", "99", "AQo", "A9s", "KQo", 
@@ -36,9 +41,10 @@ DECK = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
         "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "Th", "Jh", "Qh", "Kh", "Ah", 
         "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "Ts", "Js", "Qs", "Ks", "As"}
 
-def get_range_hands(position: str, num_hands=1326):
+def get_range_hands(position: str, heads_up=False, num_hands=1326):
     """Returns list of all hands in that percentile"""
-    max_index = (int)(169 * DEFAULT_RANGES[position])
+    ranges = HEADS_UP_RANGES if heads_up else DEFAULT_RANGES
+    max_index = (int)(169 * ranges[position])
     top_hands = HAND_STRENGTH[0:max_index]
     card_combos = []
     for hand in top_hands:
