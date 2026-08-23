@@ -89,10 +89,7 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
     known_cards.extend(community_cards)
     remaining_deck = deck - set(known_cards) # this is a set
     num_cards_needed = 5 - len(community_cards)
-    print(f"community_cards: {community_cards}, len: {len(community_cards)}")
-    print(f"num_cards_needed: {num_cards_needed}")
-    print(f"remaining_deck size: {len(remaining_deck)}")
-
+   
     wins = np.zeros(len(pockets_list))
     total = 0
 
