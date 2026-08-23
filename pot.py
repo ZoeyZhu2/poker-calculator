@@ -2,15 +2,15 @@ import evaluation
 from collections import defaultdict
 
 
-class pot():
+class Pot():
 
     def __init__(self):
-        self.player_contributions = {"UTG": 0, "UTG+1": 0, "UTG+2": 0, "LJ": 0, "HJ": 0, "CO": 0, "BTN": 0, "SB": 0, "BB": 0}
+        self.player_contributions = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0} # seat -> contribution
         # players -> contributions
         self.amount = 0
 
-    def add_contribution(self, player_pos, amount):
-        self.player_contributions[player_pos] += amount
+    def add_contribution(self, seat, amount):
+        self.player_contributions[seat] += amount
         self.amount += amount
 
     def calculate_payout(self, player_cards, board_cards):
@@ -18,18 +18,18 @@ class pot():
         # if the winner(s) have the most contribution, they get all of the pot
         # otherwise, figure out how to split the side pot
 
-        # player_cards is a dict: player position -> actual hand as a list ["Ah", "7s"]
-        hands = {} # position -> evaluated hand
-        for position, cards in player_cards.items():
+        # player_cards is a dict: player seat -> actual hand as a list ["Ah", "7s"]
+        hands = {} # seat -> evaluated hand
+        for seat, cards in player_cards.items():
             seven_cards = board_cards + cards
-            hands[position] = evaluation.evaluate_from_seven(seven_cards)
+            hands[seat] = evaluation.evaluate_from_seven(seven_cards)
 
         layers = dict() # contribution amount -> players involved
-        for player, contribution in self.player_contributions.items():
+        for seat, contribution in self.player_contributions.items():
             if contribution not in layers:
-                layers[contribution] = [player]
+                layers[contribution] = [seat]
             else:
-                layers[contribution].append(player)
+                layers[contribution].append(seat)
 
         contributions = sorted(layers.keys(), reverse=True) # contribution amounts in greatest to least
         for i in range(1, len(contributions)):
@@ -40,21 +40,21 @@ class pot():
             layer_amounts[contributions[i]] = contributions[i] * len(layers[contributions[i]]) - contributions[i+1] * len(layers[contributions[i]])
             # need len(layer_amounts[contributions[i]]) for both terms because only the higher threshold players also overlap with the lower threshold
         layer_amounts[contributions[-1]] = contributions[-1] * len(layers[contributions[-1]])
-        payouts = defaultdict(int) # player position -> payout amount
+        payouts = defaultdict(int) # player seat -> payout amount
 
-        for layer, players in layers.items():
+        for layer, seats in layers.items():
             winners = list()
             best_hand = (0,0,0,0,0,0)
-            for player in players:
-                if player not in hands:
+            for seat in seats:
+                if seat not in hands:
                     continue
-                if hands[player] > best_hand:
-                    best_hand = hands[player]
-                    winners = [player]
-                elif hands[player] == best_hand:
-                    winners.append(player)
-            for player in winners:
-                payouts[player] += layer_amounts[layer] / len(winners)
+                if hands[seat] > best_hand:
+                    best_hand = hands[seat]
+                    winners = [seat]
+                elif hands[seat] == best_hand:
+                    winners.append(seat)
+            for seat in winners:
+                payouts[seat] += layer_amounts[layer] / len(winners)
     
         return payouts
         
