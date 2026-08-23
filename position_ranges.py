@@ -41,10 +41,14 @@ DECK = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
         "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "Th", "Jh", "Qh", "Kh", "Ah", 
         "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "Ts", "Js", "Qs", "Ks", "As"}
 
-def get_range_hands(position: str, heads_up=False, num_hands=1326):
+def get_range_hands(position: str, heads_up=False, looseness = 1.0, num_hands=1326):
     """Returns list of all hands in that percentile"""
     ranges = HEADS_UP_RANGES if heads_up else DEFAULT_RANGES
-    max_index = (int)(169 * ranges[position])
+    max_index = (int)(169 * ranges[position] * looseness)
+    if max_index > 169:
+        max_index = 169
+    if max_index < 1:
+        max_index = 1
     top_hands = HAND_STRENGTH[0:max_index]
     card_combos = []
     for hand in top_hands:
