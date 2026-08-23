@@ -1,12 +1,6 @@
-evaluation.py
-├── parse card strings → (rank, suit)
-├── evaluate 5 cards → comparable tuple
-└── compare hands (implicit - just use > operator on tuples)
-
-simulation.py
-├── generate remaining cards (from deck)
-├── evaluate all scenarios (your hand vs opponent across all possible boards)
-└── count wins → equity %
+set up cli to redirect to two modes
+set up cli for mode 2
+introduce betting and stuff for mode 1
 
 generally, high to low order
 0: (0, rank1, rank2, rank3, rank4, rank5)           High card
@@ -28,3 +22,28 @@ generally, high to low order
 6: Full house     
 7: Four of a kind
 8: Straight flush
+
+
+Goals:
+Texas hold’em
+Two modes:
+1st mode: play against bots
+choose how many players at the table (2-9)
+choose aggressiveness, volatility, and looseness of each bot, or let it be randomized
+choose blinds and starting stacks (or let it default to 100-200 with 4000 starting stack)
+deal cards
+toggle on/off the helper, which after each action (a player’s action, a card dealt) estimate equity and EV based on range estimates
+choose to continue playing (will move dealer around) or start a new game after each round
+- this helper will show estimated equities (and reveal true equities at the end)
+
+2nd mode: input external game information to calculate live equity and EV for the user
+choose how many players at the table (2-9)
+label which position you are currently in
+input blinds and stacks
+aggressiveness, volatility, and looseness will be default for each player, but can be customized
+assumes each player plays at perfect ev (so 0 volatility), but can be customized
+input hole cards, community cards dealt, and player actions live as round progresses
+at the end of each round, can update the blinds, players in, or start a new game. Otherwise, will move the dealer around and will not change other settings.
+
+Include a post-hand analyzer that builds up player profiles (and recommends them):
+looseness, volatility, and aggressiveness-from-betting-behavior 
