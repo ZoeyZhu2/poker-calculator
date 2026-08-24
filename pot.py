@@ -57,5 +57,10 @@ class Pot():
                 payouts[seat] += layer_amounts[layer] / len(winners)
     
         return payouts
-        
+
+    def get_amount(self):
+        return self.amount
+
+    def get_player_contributions(self):
+        return self.player_contributions
 

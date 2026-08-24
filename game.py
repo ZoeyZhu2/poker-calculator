@@ -127,12 +127,37 @@ class PokerGame:
             next_pos_idx = (next_pos_idx + 1) % num_players
             next_seat_idx = (next_seat_idx + 1) % num_players
 
+    def get_action_order(self, betting_round):
+        # betting_round: 0,1,2,3 for preflop, post flop, post turn, post river
+        start_pos = "UTG" if betting_round == 0 else "SB"
+        if self.num_players == 2:
+            start_pos = "BTN" if betting_round == 0 else "BB"
+        pos_to_seat = {pos: seat for seat, pos in self.rotation.items()} # pos -> seat 
+        active_pos = [pos for pos in positions if pos in pos_to_seat and self.seats_in[pos_to_seat[pos]]]
+        start_idx = active_pos.index(start_pos)
+        action_order = active_pos[start_idx:] + active_pos[:start_idx]
+        return [pos_to_seat[pos] for pos in action_order]
 
+    def calculate_ev(self, equity, cost_to_call):
+        return equity * (self.pot.get_amount() + cost_to_call) - cost_to_call
 
-
-    def get_seats_in(self):
-        return self.seats_in
+    def get_own_seat(self):
+        return self.own_seat
 
     def get_own_pos(self):
         return self.own_pos
 
+    def get_occupied_seats(self):
+        return self.occupied_seats
+    
+    def get_seats_in(self):
+        return self.seats_in
+
+    def get_player_contributions(self):
+        return self.pot.get_player_contributions()
+
+    def get_max_contribution(self):
+        return max(self.get_player_contributions().values())
+
+    def get_own_contribution(self):
+        return self.get_player_contributions()[self.own_seat] 
