@@ -71,3 +71,10 @@ def hand_name_to_cards(hand):
                 if suit1 != suit2:
                     cards.append([hand[0] + suit1, hand[1] + suit2])
     return cards
+
+def get_prob_fold(pos, looseness, bet, pot_size, heads_up=False):
+    new_range = get_range_hands(pos, heads_up=heads_up, looseness = looseness, num_hands=1326)
+    pass
+
+def get_prob_cont(pos, looseness, bet, pot_size, heads_up=False):
+    pass
