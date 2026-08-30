@@ -138,8 +138,71 @@ class PokerGame:
         action_order = active_pos[start_idx:] + active_pos[:start_idx]
         return [pos_to_seat[pos] for pos in action_order]
 
-    def calculate_ev(self, equity, cost_to_call):
+    def calculate_ev_call(self, equity, cost_to_call):
         return equity * (self.pot.get_amount() + cost_to_call) - cost_to_call
+
+    def calculate_ev_raise(self, bet):
+        # note: opponent reraise will be built later
+        # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
+        # p_fold and p_call will be averagse
+        # p_call as it is is probability of continuining (so call and reraise included)
+        num_opp_in = 0
+        p_fold = 0
+        for s, value in self.seats_in.items():
+            if s == self.own_seat:
+                continue
+            if value:
+                num_opp_in += 1
+                pos = self.rotation[s]
+                p_fold += position_ranges.get_prob_fold(pos, self.traits[s], bet, self.pot.get_amount())
+        p_fold = p_fold / num_opp_in
+        p_call = 0
+        for s, value in self.seats_in.items():
+            if s == self.own_seat:
+                continue
+            if value:
+                pos = self.rotation[s]
+                p_call += position_ranges.get_prob_cont(pos, self.traits[s], bet, self.pot.get_amount())
+        p_call = p_call / num_opp_in
+        new_equity = self.get_bet_equity(tightness=0.1)
+
+        ev = p_fold * self.pot.get_amount() + p_call * (new_equity * (self.pot.get_amount() + ( num_opp_in + 1) * bet) - bet)
+
+        return ev
+
+    def get_bet_equity(self, tightness=0):
+        heads_up = (self.num_players == 2)
+        ranges = dict() # position -> all range hands
+        for key, value in self.seats_in.items():
+            if key == self.own_seat:
+                continue
+            if value is True:
+                pos = self.rotation[key]
+                looseness = max(self.traits[key]-tightness, 0)
+                ranges[pos] = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
+        equities_sum = np.zeros(len(ranges) + 1)
+        for i in range(10000):
+            pocket_list = [self.own_hand]
+            selected_cards = set()
+            for card in self.own_hand:
+                selected_cards.add(card)
+            for card in self.board_cards:
+                selected_cards.add(card)
+            for key, value in ranges.items():
+                random_cards = random.choice(value)
+                card1, card2 = random_cards
+                while card1 in selected_cards or card2 in selected_cards:
+                    random_cards = random.choice(value)
+                    card1, card2 = random_cards
+                selected_cards.add(card1)
+                selected_cards.add(card2)
+                pocket_list.append(random_cards)
+            # only testing one combination of community cards per combinations of hands:
+            equity_list = equity_calculator.calculate_equity(pocket_list, self.board_cards, 1)
+            equities_sum = equities_sum + np.array(equity_list)
+        avg_equities = equities_sum / 10000    
+        return avg_equities[0]
+
 
     def get_own_seat(self):
         return self.own_seat
