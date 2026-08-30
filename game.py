@@ -19,6 +19,7 @@ class PokerGame:
         # occupied_seats is a list of integers
         self.occupied_seats = occupied_seats
         self.num_players = len(occupied_seats)
+        self.num_in = len(occupied_seats)
         # board cards is a list of any community cards already dealt out ex: ["2s", "7d", "5h"]
         self.board_cards = board_cards
         self.populate_positions(occupied_seats)
@@ -69,6 +70,7 @@ class PokerGame:
     
     def fold_player(self, seat):
         self.seats_in[seat] = False
+        self.num_in -= 1
 
     def player_bet(self, seat, amount):
         self.pot.add_contribution(seat, amount)
@@ -84,6 +86,7 @@ class PokerGame:
             self.own_seat = own_seat
         self.own_hand = own_hand
         self.num_players = len(seats_occupied)
+        self.num_in = len(seats_occupied)
         self.populate_positions(seats_occupied, rotate=True)
         self.pot = pot.Pot()
 
@@ -216,6 +219,9 @@ class PokerGame:
     
     def get_seats_in(self):
         return self.seats_in
+
+    def get_num_in(self):
+        return self.num_in
 
     def get_player_contributions(self):
         return self.pot.get_player_contributions()
