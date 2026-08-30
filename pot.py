@@ -21,6 +21,8 @@ class Pot():
         # player_cards is a dict: player seat -> actual hand as a list ["Ah", "7s"]
         hands = {} # seat -> evaluated hand
         for seat, cards in player_cards.items():
+            if cards == ["", ""]: # player mucked
+                continue
             seven_cards = board_cards + cards
             hands[seat] = evaluation.evaluate_from_seven(seven_cards)
 
