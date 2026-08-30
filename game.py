@@ -36,7 +36,7 @@ class PokerGame:
 
     # getting range equities (so an estimation)
     def get_equity(self):
-        heads_up = (self.num_players == 2)
+        heads_up = sum(self.seats_in.values()) == 2
         ranges = dict() # position -> all range hands
         for key, value in self.seats_in.items():
             if key == self.own_seat:
@@ -146,6 +146,7 @@ class PokerGame:
         # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
         # p_fold and p_call will be averagse
         # p_call as it is is probability of continuining (so call and reraise included)
+        heads_up = sum(self.seats_in.values()) == 2
         num_opp_in = 0
         p_fold = 0
         for s, value in self.seats_in.items():
@@ -154,7 +155,7 @@ class PokerGame:
             if value:
                 num_opp_in += 1
                 pos = self.rotation[s]
-                p_fold += position_ranges.get_prob_fold(pos, self.traits[s], bet, self.pot.get_amount())
+                p_fold += position_ranges.get_prob_fold(pos, self.traits[s], bet, self.pot.get_amount(), heads_up=heads_up)
         p_fold = p_fold / num_opp_in
         p_call = 0
         for s, value in self.seats_in.items():
@@ -162,7 +163,7 @@ class PokerGame:
                 continue
             if value:
                 pos = self.rotation[s]
-                p_call += position_ranges.get_prob_cont(pos, self.traits[s], bet, self.pot.get_amount())
+                p_call += position_ranges.get_prob_cont(pos, self.traits[s], bet, self.pot.get_amount(), heads_up=heads_up)
         p_call = p_call / num_opp_in
         new_equity = self.get_bet_equity(tightness=0.1)
 
@@ -171,7 +172,7 @@ class PokerGame:
         return ev
 
     def get_bet_equity(self, tightness=0):
-        heads_up = (self.num_players == 2)
+        heads_up = sum(self.seats_in.values()) == 2
         ranges = dict() # position -> all range hands
         for key, value in self.seats_in.items():
             if key == self.own_seat:
