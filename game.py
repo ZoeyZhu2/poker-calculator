@@ -9,13 +9,17 @@ positions = ["BTN", "SB", "BB", "UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO"]
 
 
 class PokerGame:
-    def __init__(self, own_hand: list, own_pos: str, own_seat: int, occupied_seats: list, board_cards: list):
+    def __init__(self, own_hand: list, own_pos: str, own_seat: int, occupied_seats: list, stacks: dict, board_cards: list):
         # own_hand is a list of two cards ex: ["Ah", "Kd"]
         self.own_hand = own_hand
         # own_pos is a string representing position ex: "BTN"
         self.own_pos = own_pos
         # own_seat is an integer representing seat number
         self.own_seat = own_seat
+        # own_seat is an integer representing own stack amount
+        # stacks keeps track of seat -> stack
+        self.stacks = stacks
+        self.own_stack = self.stacks[self.own_seat]
         # occupied_seats is a list of integers
         self.occupied_seats = occupied_seats
         self.num_players = len(occupied_seats)
@@ -74,21 +78,28 @@ class PokerGame:
 
     def player_bet(self, seat, amount):
         self.pot.add_contribution(seat, amount)
+        self.stacks[seat] -= amount
 
     def add_board_card(self, card):
         self.board_cards.append(card)
 
     def get_payout(self, player_cards):
-        return self.pot.calculate_payout(player_cards, self.board_cards)
+        payouts = self.pot.calculate_payout(player_cards, self.board_cards)
+        for seat, amount in payouts.items():
+            self.stacks[seat] += amount
+        return payouts
 
-    def new_round(self, own_hand, seats_occupied, own_seat=None):
-        if own_seat is not None:
-            self.own_seat = own_seat
+    def award_directly(self, seat):
+        self.stacks[seat] += self.pot.get_amount()
+
+    def new_round(self, own_hand, seats_occupied, own_seat, stacks):
+        self.own_seat = own_seat
         self.own_hand = own_hand
         self.num_players = len(seats_occupied)
         self.num_in = len(seats_occupied)
         self.populate_positions(seats_occupied, rotate=True)
         self.pot = pot.Pot()
+        self.stacks = stacks
 
 
     def populate_positions(self, seats_occupied, rotate=False):
@@ -130,13 +141,19 @@ class PokerGame:
             next_pos_idx = (next_pos_idx + 1) % num_players
             next_seat_idx = (next_seat_idx + 1) % num_players
 
-    def get_action_order(self, betting_round):
+    def get_action_order(self, betting_round, seats_all_in):
         # betting_round: 0,1,2,3 for preflop, post flop, post turn, post river
         start_pos = "UTG" if betting_round == 0 else "SB"
-        if self.num_players == 2:
+        seats_to_count = dict()
+        for seat, value in self.seats_in.items():
+            if seat in seats_all_in:
+                seats_to_count[seat] = False
+            else:
+                seats_to_count[seat] = value
+        if sum(seats_to_count.values()) == 2:
             start_pos = "BTN" if betting_round == 0 else "BB"
         pos_to_seat = {pos: seat for seat, pos in self.rotation.items()} # pos -> seat 
-        active_pos = [pos for pos in positions if pos in pos_to_seat and self.seats_in[pos_to_seat[pos]]]
+        active_pos = [pos for pos in positions if pos in pos_to_seat and seats_to_count[pos_to_seat[pos]]]
         start_idx = active_pos.index(start_pos)
         action_order = active_pos[start_idx:] + active_pos[:start_idx]
         return [pos_to_seat[pos] for pos in action_order]
@@ -231,3 +248,6 @@ class PokerGame:
 
     def get_own_contribution(self):
         return self.get_player_contributions()[self.own_seat] 
+
+    def get_stack(self, seat):
+        return self.stacks[seat]
