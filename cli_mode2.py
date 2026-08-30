@@ -1,6 +1,6 @@
-# reject invalid input
-
 import game
+from exceptions import QuitGame
+from exceptions import get_input
 
 def main():
     try:
@@ -76,15 +76,5 @@ def update_action(poker_game, betting_round):
         else:
             poker_game.player_bet(seat, amount)    
 
-def get_input(prompt):
-        val = input(prompt)
-        if val.strip().lower() == "q" or val.strip().lower() == "quit":
-            raise QuitGame()
-        else:
-            return val
-
-class QuitGame(Exception):
-    pass
-
-if __name__ == "__main__":
+if __name__ == "__main__": # name is only main if a user runs it, not if another file imports this one
     main()
