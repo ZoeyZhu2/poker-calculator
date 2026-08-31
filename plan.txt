@@ -1,6 +1,11 @@
 introduce betting and stuff for mode 1
 make a GUI with streamlit for everything to see it instead of only cli being available
 eventually migrate to a tech stack 
+eventually give option to customize blind and stack amounts in mode 1
+eventually track existing stack for each player (and have the option to carry over from game to game)
+eventually make player accouts and allow people to play multiplayer or with bots
+eventually have tournaments against bots or players 
+eventually have a leaderboard of net earnings against bots
 eventually add prob_reraise and prob_call
 eventually update prob_fold to include prevous player action history
 
