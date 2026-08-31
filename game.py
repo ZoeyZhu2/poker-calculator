@@ -161,7 +161,7 @@ class PokerGame:
     def calculate_ev_call(self, equity, cost_to_call):
         return equity * (self.pot.get_amount() + cost_to_call) - cost_to_call
 
-    def calculate_ev_raise(self, bet):
+    def calculate_ev_raise(self, bet, betting_round):
         # note: opponent reraise will be built later
         # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
         # p_fold and p_call will be averagse
@@ -169,25 +169,22 @@ class PokerGame:
         heads_up = sum(self.seats_in.values()) == 2
         num_opp_in = 0
         p_fold = 0
+        p_cont = 0
         for s, value in self.seats_in.items():
             if s == self.own_seat:
                 continue
             if value:
                 num_opp_in += 1
                 pos = self.rotation[s]
-                p_fold += position_ranges.get_prob_fold(pos, self.traits[s], bet, self.pot.get_amount(), heads_up=heads_up)
+                board_texture = position_ranges.get_board_texture(self.board_cards)
+                prob_fold = position_ranges.get_prob_fold(pos, self.traits[s], bet, self.pot.get_amount(), self.stacks[s], betting_round, board_texture, heads_up=heads_up)
+                p_fold += prob_fold
+                p_cont += 1 - prob_fold
         p_fold = p_fold / num_opp_in
-        p_call = 0
-        for s, value in self.seats_in.items():
-            if s == self.own_seat:
-                continue
-            if value:
-                pos = self.rotation[s]
-                p_call += position_ranges.get_prob_cont(pos, self.traits[s], bet, self.pot.get_amount(), heads_up=heads_up)
-        p_call = p_call / num_opp_in
+        p_cont = p_cont / num_opp_in
         new_equity = self.get_bet_equity(tightness=0.1)
 
-        ev = p_fold * self.pot.get_amount() + p_call * (new_equity * (self.pot.get_amount() + ( num_opp_in + 1) * bet) - bet)
+        ev = p_fold * self.pot.get_amount() + p_cont * (new_equity * (self.pot.get_amount() + ( num_opp_in + 1) * bet) - bet)
 
         return ev
 
