@@ -114,7 +114,7 @@ def update_action(poker_game, betting_round, seats_all_in=None):
                     if bet < cost_to_call:
                         print("You must input a higher number")
                         continue
-                    print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet)}")
+                    print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet, betting_round)}")
             amount = int(get_input(f"How much did the player in seat {seat} bet? (any negative for fold): "))
             if amount < 0:
                 poker_game.fold_player(seat)
