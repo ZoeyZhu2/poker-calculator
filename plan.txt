@@ -1,8 +1,8 @@
-work on prob_fold and prob_cont for mode2 in position ranges
-make a GUI for cli and cli2
 introduce betting and stuff for mode 1
-make a GUI for cli1
+make a GUI with streamlit for everything to see it instead of only cli being available
+eventually migrate to a tech stack 
 eventually add prob_reraise and prob_call
+eventually update prob_fold to include prevous player action history
 
 generally, high to low order
 0: (0, rank1, rank2, rank3, rank4, rank5)           High card
