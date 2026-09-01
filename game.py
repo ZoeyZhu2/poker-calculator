@@ -40,20 +40,24 @@ class PokerGame:
         self.traits[seat] = looseness
 
     # getting range equities (so an estimation)
-    def get_equity(self):
+    def get_equity(self, seat=None, hand=None):
+        if seat is None:
+            seat = self.own_seat
+        if hand is None:
+            hand = self.own_hand
         heads_up = sum(self.seats_in.values()) == 2
         ranges = dict() # position -> all range hands
         for key, value in self.seats_in.items():
-            if key == self.own_seat:
+            if key == seat:
                 continue
             if value is True:
                 pos = self.rotation[key]
                 ranges[pos] = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=self.traits[key])
         equities_sum = np.zeros(len(ranges) + 1)
         for i in range(10000):
-            pocket_list = [self.own_hand]
+            pocket_list = [hand]
             selected_cards = set()
-            for card in self.own_hand:
+            for card in hand:
                 selected_cards.add(card)
             for card in self.board_cards:
                 selected_cards.add(card)
@@ -161,17 +165,21 @@ class PokerGame:
     def calculate_ev_call(self, equity, cost_to_call):
         return equity * (self.pot.get_amount() + cost_to_call) - cost_to_call
 
-    def calculate_ev_raise(self, bet, betting_round):
+    def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None):
         # note: opponent reraise will be built later
         # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
         # p_fold and p_call will be averagse
         # p_call as it is is probability of continuining (so call and reraise included)
+        if seat is None:
+            seat = self.own_seat
+        if hand is None:
+            hand = self.own_hand
         heads_up = sum(self.seats_in.values()) == 2
         num_opp_in = 0
         p_fold = 0
         p_cont = 0
         for s, value in self.seats_in.items():
-            if s == self.own_seat:
+            if s == seat:
                 continue
             if value:
                 num_opp_in += 1
@@ -182,17 +190,21 @@ class PokerGame:
                 p_cont += 1 - prob_fold
         p_fold = p_fold / num_opp_in
         p_cont = p_cont / num_opp_in
-        new_equity = self.get_bet_equity(tightness=0.1)
+        new_equity = self.get_bet_equity(tightness=0.1, seat=seat, hand=hand)
 
         ev = p_fold * self.pot.get_amount() + p_cont * (new_equity * (self.pot.get_amount() + ( num_opp_in + 1) * bet) - bet)
 
         return ev
 
-    def get_bet_equity(self, tightness=0):
+    def get_bet_equity(self, tightness=0, seat=None, hand=None):
+        if seat is None:
+            seat = self.own_seat
+        if hand is None:
+            hand = self.own_hand
         heads_up = sum(self.seats_in.values()) == 2
         ranges = dict() # position -> all range hands
         for key, value in self.seats_in.items():
-            if key == self.own_seat:
+            if key == seat:
                 continue
             if value is True:
                 pos = self.rotation[key]
@@ -200,9 +212,9 @@ class PokerGame:
                 ranges[pos] = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
         equities_sum = np.zeros(len(ranges) + 1)
         for i in range(10000):
-            pocket_list = [self.own_hand]
+            pocket_list = [hand]
             selected_cards = set()
-            for card in self.own_hand:
+            for card in hand:
                 selected_cards.add(card)
             for card in self.board_cards:
                 selected_cards.add(card)
@@ -248,3 +260,11 @@ class PokerGame:
 
     def get_stack(self, seat):
         return self.stacks[seat]
+
+    def set_stack(self, seat, amount):
+        self.stacks[seat] = amount
+
+    def set_all_stacks(self, amount):
+        for seat in self.seats_in:
+            self.stacks[seat] = amount
+            
