@@ -3,14 +3,23 @@ import game
 
 class bot():
 
-    def __init__(self, volatility, aggressiveness, looseness=1.0):
+    def __init__(self, volatility=None, aggressiveness=None, looseness=None):
         # volatility is a float from 0 to 1 measure percentage it can swing from playing according to its ev thresholds for calling and raising on big_blind
         # aggressiveness is a float from 0 to 1 measuring how much worse ev_raise needs to be than ev_call to raise (1 is max aggression)
         # looseness is a percentage of default range (starting from best hands) it will play (can also go over default range). Measures how much worse ev_call can be to call. Higher looseness means more loose
-        self.volatility = volatility
-        self.aggressiveness = aggressiveness
-        self.looseness = looseness
-
+        if volatility is not None:
+            self.volatility = volatility
+        else:
+            self.volatility = random.uniform(0,1)
+        if aggressiveness is not None:
+            self.aggressiveness = aggressiveness
+        else:
+            self.aggressiveness = random.uniform(0,1)
+        if looseness is not None:
+            self.looseness = looseness
+        else:
+            self.looseness = random.uniform(0.5, 1.5)
+    
     def decision(self, game, seat, hand, stack, ev_call, betting_round, pot, cost_to_call, big_blind):
         # game is a PokerGame instance that is the current game being played
         # ev_call is a float
@@ -51,3 +60,12 @@ class bot():
         options = sorted(options, key=lambda ev: ev[2], reverse=True)
         best_option = options[0]
         return best_option[0], best_option[1]
+
+    def set_volatility(self, volatility):
+        self.volatility = volatility
+
+    def set_aggressiveness(self, aggressiveness):
+        self.aggressiveness = aggressiveness
+
+    def set_looseness(self, looseness):
+        self.looseness = looseness
