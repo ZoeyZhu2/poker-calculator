@@ -32,7 +32,7 @@ class PokerGame:
         # pot keeps track of the pot
         self.pot = pot.Pot()
         # seat -> bot for mode 1
-        self.bots = {1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None}
+        # self.bots = {1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None}
         # seat -> looseness for mode 2 (eventually volatility and aggressiveness will be added)
         self.traits = {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0}
         
