@@ -1,21 +1,67 @@
 from exceptions import QuitGame
 from exceptions import get_input
 import game
+import bot
+import random
+import deck
 
 def main():
     try:
         print("At any point, input q or quit to quit.")
         num_players = int(get_input("How many players are playing (including you)? Enter a digit 2-9: "))
-        # for i in range(1, num_players):
-            # generate a bot
-            # add option to customize bot
-        # put everyone in their positions and seats: occupied_seats
-        # tell player their positions own_pos, own_seat
-        # default everyone starts with a stack of 200 and playing 1/2
-        # deal cards
-        # tell player their hole cards: own_hand = 
-        # same flow as cli_mode2
-        poker_game = game.PokerGame(own_hand, own_pos, own_seat, occupied_seats, stacks, [])
+        bots = list()
+        for i in range(1, num_players):
+            volatility = None
+            aggressiveness = None
+            looseness = None
+            customize = get_input("Would you like to customize this bot (Y/N)? ")
+            if customize.lower() == "y":
+                volatile = get_input("How volatile do you want this bot to be (enter integer 0-5): ")
+                volatility = 0.2 * int(volatile.strip())
+                aggressive = get_input("How aggressive do you want this bot to be (enter integer 0-5): ")
+                aggressiveness = 0.2 * int(aggressive.strip())
+                loose = get_input("How aggressive do you want this bot to be (enter integer 1-5; 3 is normal, 1 is super tight, 5 is super loose): ")
+                looseness = 0.5 + int(loose.strip()) * 0.25
+            new_bot = bot.bot(volatility, aggressiveness, looseness)
+            bots.append(new_bot)
+        player_seat = random.randint(1, num_players)
+        active_pos = list()
+        if num_players > 1:
+            active_pos.append("BTN")
+            active_pos.append("BB")
+            # this is so ranges are more accurate in heads-up
+        if num_players > 2:
+            active_pos.append("SB")
+        if num_players > 3:
+            active_pos.append("UTG")
+        if num_players > 4:
+            active_pos.append("CO")
+        if num_players > 5:
+            active_pos.append("HJ")
+        if num_players > 6:
+            active_pos.append("LJ")
+        if num_players > 7:
+            active_pos.append("UTG+1")
+        if num_players > 8:
+            active_pos.append("UTG+2")
+        player_pos = random.choice(active_pos)
+        occupied_seats = [i for i in range(1, num_players + 1)]
+        board_cards = []
+        stack_size = int(get_input("What do you want initial stack size to be?"))
+        big_blind = int(get_input("What do you want big blind to be?"))
+        while big_blind > stack_size:
+            big_blind = int(get_input("What do you want big blind to be?"))
+        stacks = dict() # seat -> stack_size
+        for i in range (1, num_players + 1):
+            stacks[i] = stack_size
+        players_hands = dict() # player/bot -> (card1, card2)
+        deck = deck.Deck()
+        player_seats = dict() # player/bot -> seat number
+        for b in bots:
+
+
+        # ignore everything past this point for now
+        poker_game = game.PokerGame(own_hand, player_pos, player_seat, occupied_seats, stacks, board_cards)
         while True:
             num_in, seats_all_in, seat = update_action(poker_game, 0)
 
