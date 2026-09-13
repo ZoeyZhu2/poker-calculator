@@ -1,5 +1,13 @@
-introduce betting and stuff for mode 1
+calibrate get_board_texture formula coefficients via testing
+
+calibrate bot's calculate_ev_raise tightness stuff
+
+The main tradeoff: leaving it out means your texture score will misjudge paired boards as "dry" when they're strategically distinct, so any test hand you run on a paired board specifically will look less trustworthy — but if none of your test boards are paired (which they aren't, in the list I gave you), it just doesn't come up yet. I'd finish validating the tightness-scaling fix first, then come back to pairing as its own follow-up once you're confident the core sizing logic behaves sensibly.
+
 make a GUI with streamlit for everything to see it instead of only cli being available
+calibrate get_board_texture formula coefficients via testing with a solver
+
+
 eventually migrate to a tech stack 
 eventually give option to customize blind and stack amounts in mode 1
 eventually track existing stack for each player (and have the option to carry over from game to game)
