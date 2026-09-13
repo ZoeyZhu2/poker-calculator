@@ -20,7 +20,7 @@ class bot():
         else:
             self.looseness = random.uniform(0.5, 1.5)
     
-    def decision(self, game, seat, hand, stack, ev_call, betting_round, pot, cost_to_call, big_blind):
+    def decision(self, game, seat, hand, stack, ev_call, betting_round, pot, cost_to_call, last_bet, big_blind):
         # game is a PokerGame instance that is the current game being played
         # ev_call is a float
         # stack, betting_round, pot, cost_to_call, big_blind is an int
@@ -32,7 +32,7 @@ class bot():
             return "side pot", 0
 
         options = [] # (action, bet size, ev)
-        options.append(("fold", 0, 0))
+        options.append(("fold", -1, 0))
         cost_to_call = min(cost_to_call, stack)  # cap first
         adjusted_ev_call = ev_call + random.uniform(-self.volatility * big_blind, self.volatility * big_blind)
         adjusted_ev_call = adjusted_ev_call + (-1.0 + self.looseness) * big_blind
@@ -40,10 +40,13 @@ class bot():
 
         bet_proportions = [0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 1]
         bet_sizes = []
+        min_bet = last_bet * 2
+        if min_bet <= stack and min_bet > 0:
+            bet_sizes.append(min_bet)
         for prop in bet_proportions:
-            if prop * pot > stack:
-                break
-            bet_sizes.append(max(big_blind, prop * pot))
+            if prop * pot > min_bet:
+                if prop * pot <= stack:
+                    bet_sizes.append(max(big_blind, prop * pot))
         bet_sizes.append(stack)
 
         raise_options = []
