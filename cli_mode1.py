@@ -9,6 +9,11 @@ def main():
     try:
         print("At any point, input q or quit to quit.")
         num_players = int(get_input("How many players are playing (including you)? Enter a digit 2-9: "))
+        while num_players < 2 or num_players > 9:
+            print("Please enter a different number.")
+            num_players = int(get_input("How many players are playing (including you)? Enter a digit 2-9: "))
+    
+        # creating bots
         bots = list()
         for i in range(1, num_players):
             volatility = None
@@ -24,7 +29,8 @@ def main():
                 looseness = 0.5 + int(loose.strip()) * 0.25
             new_bot = bot.bot(volatility, aggressiveness, looseness)
             bots.append(new_bot)
-        player_seat = random.randint(1, num_players)
+
+        # getting active positions
         active_pos = list()
         if num_players > 1:
             active_pos.append("BTN")
@@ -44,101 +50,132 @@ def main():
             active_pos.append("UTG+1")
         if num_players > 8:
             active_pos.append("UTG+2")
-        player_pos = random.choice(active_pos)
-        occupied_seats = [i for i in range(1, num_players + 1)]
-        board_cards = []
+
+        # setting stack sizes and big_blinds
         stack_size = int(get_input("What do you want initial stack size to be?"))
         big_blind = int(get_input("What do you want big blind to be?"))
-        while big_blind > stack_size:
+        while big_blind > stack_size or big_blind <= 0:
             big_blind = int(get_input("What do you want big blind to be?"))
+        small_blind = int(get_input("What do you want small blind to be?"))
+        while small_blind <= 0 or small_blind > big_blind:
+            small_blind = int(get_input("What do you want big blind to be?"))
         stacks = dict() # seat -> stack_size
         for i in range (1, num_players + 1):
             stacks[i] = stack_size
-        players_hands = dict() # player/bot -> (card1, card2)
-        deck = deck.Deck()
-        player_seats = dict() # player/bot -> seat number
+
+        # assigning seat
+        player_seats = dict() # seat -> player
+        player_seat = random.randint(1, num_players)
+        player_seats[player_seat] = "player"
+        current_seat = 1
         for b in bots:
+            if current_seat == player_seat:
+                current_seat += 1
+            player_seats[current_seat] = b
+            current_seat += 1
+            
 
+        # assigning community cards
+        board_cards = []
 
-        # ignore everything past this point for now
+        # assigning position
+        player_pos = random.choice(active_pos)
+
+        # making list of seats
+        occupied_seats = [i for i in range(1, num_players + 1)]
+
+        # assigning hand
+        game_deck = deck.Deck()
+        own_hand = []
+        own_hand.append(game_deck.deal_card())
+        own_hand.append(game_deck.deal_card())
+
+        player_hands = dict() # seat -> hands
+    
         poker_game = game.PokerGame(own_hand, player_pos, player_seat, occupied_seats, stacks, board_cards)
         while True:
-            num_in, seats_all_in, seat = update_action(poker_game, 0)
+            player_hands[player_seat] = own_hand
+            print(f"This is your hand: {own_hand}")
+            print(f"This is your seat and position: Seat {player_seat} {player_pos}")
+            current_seat = 1
+            for b in bots:
+                if current_seat == player_seat:
+                    current_seat += 1
+                player_hands[current_seat] = [game_deck.deal_card(), game_deck.deal_card()]
+                current_seat += 1
+
+            num_in, seats_all_in, seat = update_action(poker_game, 0, player_seats, player_hands, small_blind, big_blind)
 
             if num_in > 1:
-                board_cards_str = get_input("Flop dealt (format: AhKdQs): ")
-                for i in range(0, len(board_cards_str)-2,2):
-                    poker_game.add_board_card(board_cards_str[i:i+2])
+                cards_dealt = ""
+                for i in range(3):
+                    next_card = game_deck.deal_card()
+                    cards_dealt += next_card + " "
+                    poker_game.add_board_card(next_card)
+                print(f"Flop dealt: {cards_dealt}")
                 
-                num_in, seats_all_in, seat = update_action(poker_game, 1, seats_all_in)
+                num_in, seats_all_in, seat = update_action(poker_game, 1, player_seats, player_hands, small_blind, big_blind, seats_all_in)
 
             if num_in > 1:
-                board_card = get_input("Turn dealt (format: Ah): ")
-                poker_game.add_board_card(board_card)
+                next_card = game_deck.deal_card()
+                poker_game.add_board_card(next_card)
+                print(f"Turn dealt: {next_card}")
 
-                num_in, seats_all_in, seat = update_action(poker_game, 2, seats_all_in)
+                num_in, seats_all_in, seat = update_action(poker_game, 2, player_seats, player_hands, small_blind, big_blind, seats_all_in)
 
             if num_in > 1:
-                board_card = get_input("River dealt: (format: Ah)")
-                poker_game.add_board_card(board_card)
-                num_in, seats_all_in, seat = update_action(poker_game, 3, seats_all_in)
+                next_card = game_deck.deal_card()
+                poker_game.add_board_card(next_card)
+                print(f"River dealt: {next_card}")
+                num_in, seats_all_in, seat = update_action(poker_game, 3, player_seats, player_hands, small_blind, big_blind, seats_all_in)
 
             if num_in != 1:
             # assuming everyone didn't fold
                 seats_in = poker_game.get_seats_in()
-                player_cards = {} # seat -> showdown hand
+                player_cards = dict() # seat -> hand but only for palyers still in
                 for seat, value in seats_in.items():
                     if value:
-                        cards_str = get_input(f"Input seat {seat}'s hand (format: AhKd). If mucked, just hit enter. : ")
-                        cards_str = cards_str.strip()
-                        cards = [cards_str[:2], cards_str[2:]]
-                        player_cards[seat] = cards
-                poker_game.get_payout(player_cards)
+                        print(f"Player in seat {seat} has {player_hands[seat]}")
+                        player_cards[seat] = player_hands[seat]
+                payouts = poker_game.get_payout(player_cards)
+                for seat, payout in payouts.items():
+                    print(f"The player in seat {seat} wins: {payout}")
             else:
                 poker_game.award_directly(seat)
+                print(f"The player in seat {seat} wins: {poker_game.get_pot()}")
             
             next_round = get_input("Next round (Y/N): ").strip()
             if next_round == "N":
                 break
-            change_seat = get_input("Did seats change? (Y/N): ")
-            if change_seat == "Y":
-                own_seat = int(get_input("Your seat (1, 2, 3, 4, 5, 6, 7, 8, 9): "))
-                occupied_seats_str = get_input("All occupied seats incl. your own (format:1234): ")
-                occupied_seats = list()
-                stacks = dict()
-                for i in range(0, len(occupied_seats_str)):
-                    curr_seat = int(occupied_seats_str[i:i+1])
-                    occupied_seats.append(curr_seat)
-                    curr_stack = int(get_input(f"What is the stack size of the player at seat {curr_seat} (format: 100)? "))
-                    stacks[curr_seat] = curr_stack       
-            else: 
-                own_pos = poker_game.get_own_pos()
-                own_seat =  poker_game.get_own_seat()
-                occupied_seats = poker_game.get_occupied_seats()
-                change_stack = get_input("Did stacks change outside of gameplay? (Y/N): ")
-                if change_stack == "Y":
-                    stacks = dict()
-                    for i in range(0, len(occupied_seats_str)):
-                        curr_seat = int(occupied_seats_str[i:i+1])
-                        curr_stack = int(get_input(f"What is the stack size of the player at seat {curr_seat} (format: 100)? "))
-                        stacks[curr_seat] = curr_stack  
 
-            own_hand_str = get_input("Your hand (format: AhKd): ")
-            own_hand = list()
-            for i in range(0, len(own_hand_str)-2, 2):
-                own_hand.append(own_hand_str[i:i+2])
+            own_hand = []
+            own_hand.append(game_deck.deal_card())
+            own_hand.append(game_deck.deal_card())
 
-            poker_game.new_round(own_hand, occupied_seats, own_seat, stacks)
+            stacks = poker_game.get_stacks()
+            poker_game.new_round(own_hand, occupied_seats, player_seat, stacks)
     except QuitGame:
         print("Quitting game")
         return
     
-def update_action(poker_game, betting_round, seats_all_in=None):
+def update_action(poker_game, betting_round, player_seats, player_hands, small_blind, big_blind, seats_all_in=None):
     # betting_round: 0,1,2,3 for preflop, post flop, post turn, post river
     if seats_all_in is None:
         seats_all_in = set()
     current_equity = poker_game.get_equity()
     print(f"Current equity: {current_equity}")
+    if betting_round == 0:
+        for seat in player_seats:
+            if len(player_seats) == 2:
+                if poker_game.get_seat_pos(seat) == "BTN":
+                    poker_game.player_bet(seat, small_blind)
+                if poker_game.get_seat_pos(seat) == "BB":
+                    poker_game.player_bet(seat, big_blind)
+            else:
+                if poker_game.get_seat_pos(seat) == "SB":
+                    poker_game.player_bet(seat, small_blind)
+                if poker_game.get_seat_pos(seat) == "BB":
+                    poker_game.player_bet(seat, big_blind)
     left_to_act = poker_game.get_num_in() - len(seats_all_in)
     while left_to_act > 0: # until all bets are equal or all ins or whatever (need to write break thing)
         action_order = poker_game.get_action_order(betting_round, seats_all_in)
@@ -157,11 +194,25 @@ def update_action(poker_game, betting_round, seats_all_in=None):
                         print("You must input a higher number")
                         continue
                     print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet, betting_round)}")
-            amount = int(get_input(f"How much did the player in seat {seat} bet? (any negative for fold): "))
+                amount = int(get_input("How much do you bet? (any negative for fold): "))
+            else: # bot bets
+                equity = poker_game.get_equity(seat=seat, hand=player_hands[seat])
+                cost_to_call = poker_game.get_max_contribution() - poker_game.get_seat_contribution(seat)
+                ev_call = poker_game.calculate_ev_call(equity, cost_to_call)
+                pot = poker_game.get_pot()
+                stack = poker_game.get_stack(seat)
+                if stack == 0:
+                    seats_all_in.add(seat)
+                last_bet = poker_game.get_last_bet()
+                action, amount = player_seats[seat].decision(poker_game, seat, player_hands[seat], stack, ev_call, betting_round, pot, cost_to_call, last_bet, big_blind)
+                if action != "fold":
+                    print(f"The player in seat {seat} {action}s {amount} ")
             if amount < 0:
                 poker_game.fold_player(seat)
-                current_equity = poker_game.get_equity()
-                print(f"Current equity: {current_equity}")
+                print(f"Player in seat {seat} folds")
+                if seat != poker_game.get_own_seat():
+                    current_equity = poker_game.get_equity()
+                    print(f"Current equity: {current_equity}")
                 if poker_game.get_num_in() == 1:
                     seat = next(s for s, value in poker_game.get_seats_in().items() if value)
                     return poker_game.get_num_in(), seats_all_in, seat
