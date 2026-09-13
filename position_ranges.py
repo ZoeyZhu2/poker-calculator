@@ -127,6 +127,7 @@ def get_board_texture(board_cards):
     # weighting 0.5 num same suit, 0.25 how closely clustered each card is, and 0.25 how many high cards there are
     if len(board_cards) == 0:
         return -1
+
     num_of_suits = {"c": 0, "d": 0, "h": 0, "s": 0}
     num_of_cards = {2: 0, 3: 0, 4: 0, 5: 0, 6 : 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0}
     cards = list()
@@ -135,22 +136,38 @@ def get_board_texture(board_cards):
         num_of_suits[suit] += 1
         num_of_cards[rank] += 1
         cards.append((rank, suit))
+        
+    
     max_same_suit = max(num_of_suits.values())
     prop_same_suit = max_same_suit / len(board_cards)
+
+    max_count = max(num_of_cards.values())
+    pairedness = (max_count - 1) / 3   # 0 = no pair, 1/3 = one pair, 2/3 = trips, 1.0 = quads
+
     avg_dist_btwn_ranks = 0
-    cards = sorted(cards, key=lambda c : c[0], reverse=True)
-    for i in range(1, len(cards)):
-        avg_dist_btwn_ranks += cards[i - 1][0] - cards[i][0]
-    raw_avg_dist_btwn_ranks = avg_dist_btwn_ranks / (len(board_cards) - 1) # should be a float
-    max_avg_dist_btwn_ranks = 12 / (len(board_cards) - 1)
-    # squash btwn 0 and 1 and invert
-    avg_dist_btwn_ranks = (max_avg_dist_btwn_ranks - raw_avg_dist_btwn_ranks) / max_avg_dist_btwn_ranks
+    # cards = sorted(cards, key=lambda c : c[0], reverse=True)
+    unique_ranks = sorted([r for r, n in num_of_cards.items() if n > 0], reverse=True)
+    if len(unique_ranks) == 1:
+        avg_dist_btwn_ranks = 0.5 #keep it neutral
+    else:
+        for i in range(1, len(unique_ranks)):
+            avg_dist_btwn_ranks += unique_ranks[i - 1] - unique_ranks[i]
+        raw_avg_dist_btwn_ranks = avg_dist_btwn_ranks / (len(unique_ranks) - 1) # should be a float
+        max_avg_dist_btwn_ranks = 12 / (len(unique_ranks) - 1)
+        # squash btwn 0 and 1 and invert
+        avg_dist_btwn_ranks = (max_avg_dist_btwn_ranks - raw_avg_dist_btwn_ranks) / max_avg_dist_btwn_ranks
+        
     raw_high_card_ness = 0
     for r in range(2, 15):
         raw_high_card_ness += (r / 10) ** 2 * num_of_cards[r]
     max_high_card_ness = (14/10) ** 2 * len(board_cards)
     high_card_ness = raw_high_card_ness / max_high_card_ness
-    texture = 0.5 * prop_same_suit + 0.25 * avg_dist_btwn_ranks + 0.25 * high_card_ness
+
+    same_suit_weight = 0.25
+    pairedness_weight = 0.25
+    avg_dist_weight = 0.25
+    high_card_weight = 0.25
+    texture = same_suit_weight * prop_same_suit + pairedness_weight * pairedness + avg_dist_weight * avg_dist_btwn_ranks + high_card_weight * high_card_ness
     return texture
 
 
