@@ -148,6 +148,7 @@ def main():
             if next_round == "N":
                 break
 
+            game_deck = deck.Deck()
             own_hand = []
             own_hand.append(game_deck.deal_card())
             own_hand.append(game_deck.deal_card())
