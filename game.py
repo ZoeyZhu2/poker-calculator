@@ -27,8 +27,6 @@ class PokerGame:
         # board cards is a list of any community cards already dealt out ex: ["2s", "7d", "5h"]
         self.board_cards = board_cards
         self.populate_positions(occupied_seats)
-        # folded keeps track of folded cards. Not used right now.
-        self.folded = set()
         # pot keeps track of the pot
         self.pot = pot.Pot()
         # seat -> bot for mode 1
