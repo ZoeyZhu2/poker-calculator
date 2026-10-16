@@ -88,6 +88,8 @@ class PokerGame:
         self.num_in -= 1
 
     def player_bet(self, seat, amount):
+        if amount > self.stacks[seat]:
+            raise ValueError(f"Seat {seat} cannot bet {amount} with a stack of {self.stacks[seat]}")
         self.pot.add_contribution(seat, amount)
         self.stacks[seat] -= amount
 
@@ -300,7 +302,4 @@ class PokerGame:
 
     def get_stacks(self):
         return self.stacks
-
-    def get_last_bet(self):
-        return self.pot.get_last_bet()
             

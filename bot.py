@@ -19,7 +19,7 @@ class bot():
         else:
             self.looseness = random.uniform(0.5, 1.5)
     
-    def decision(self, game, seat, hand, stack, ev_call, betting_round, pot, cost_to_call, last_bet, big_blind):
+    def decision(self, game, seat, hand, stack, ev_call, betting_round, pot, cost_to_call, big_blind):
         # game is a PokerGame instance that is the current game being played
         # ev_call is a float
         # stack, betting_round, pot, cost_to_call, big_blind is an int
@@ -30,39 +30,36 @@ class bot():
         if stack == 0:
             return "side pot", 0
 
-        options = [] # (action, bet size, ev)
-        options.append(("fold", -1, 0))
         cost_to_call = min(cost_to_call, stack)  # cap first
+        options = [] # (action, amount, ev)
+        if cost_to_call > 0: # fold is only legal when there is something to call
+            options.append(("fold", -1, 0))
         adjusted_ev_call = ev_call + random.uniform(-self.volatility * big_blind, self.volatility * big_blind)
         adjusted_ev_call = adjusted_ev_call + (-1.0 + self.looseness) * big_blind
-        options.append(("call", cost_to_call, adjusted_ev_call))
+        call_name = "check" if cost_to_call == 0 else "call"
+        options.append((call_name, cost_to_call, adjusted_ev_call))
 
-        bet_proportions = [0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 1]
-        bet_sizes = []
-        min_bet = last_bet * 2
-        if min_bet <= stack and min_bet > 0:
-            bet_sizes.append(min_bet)
-        for prop in bet_proportions:
-            if prop * pot > min_bet:
-                if prop * pot <= stack:
-                    bet_sizes.append(max(big_blind, prop * pot))
-        bet_sizes.append(stack)
+        if stack > cost_to_call: # otherwise calling is already all-in, so no raise exists
+            min_raise = cost_to_call + big_blind
+            bet_proportions = [0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 1]
+            bet_sizes = {stack} # a set, so duplicates disappear; all-in is always an option
+            for prop in bet_proportions:
+                size = max(int(prop * pot), min_raise) # whole chips, never below the legal minimum
+                if size < stack:
+                    bet_sizes.add(size)
 
-        raise_options = []
-        for bet in bet_sizes:
-            ev_raise = game.calculate_ev_raise(bet, betting_round, seat, hand)
-            adjusted_ev_raise = ev_raise + random.uniform(-self.volatility * big_blind, self.volatility * big_blind)
-            raise_options.append(("raise", bet, adjusted_ev_raise))
-        best_raise_options = sorted(raise_options, key=lambda ev: ev[2], reverse=True)
-        best_raise_option = best_raise_options[0]
-        options.append(best_raise_option) # only adding best raise option to options
-        # applying aggressiveness to raising: 
-        options[-1] = (options[-1][0], options[-1][1], options[-1][2] + self.aggressiveness * big_blind)
-        # picking best option out of all actions
-        options = sorted(options, key=lambda ev: ev[2], reverse=True)
-        best_option = options[0]
+            raise_options = []
+            for bet in sorted(bet_sizes):
+                ev_raise = game.calculate_ev_raise(bet, betting_round, seat, hand)
+                adjusted_ev_raise = ev_raise + random.uniform(-self.volatility * big_blind, self.volatility * big_blind)
+                raise_options.append(("raise", bet, adjusted_ev_raise))
+            best_raise = max(raise_options, key=lambda option: option[2])
+            # applying aggressiveness to raising:
+            options.append((best_raise[0], best_raise[1], best_raise[2] + self.aggressiveness * big_blind))
+
+        best_option = max(options, key=lambda option: option[2])
         return best_option[0], best_option[1]
-
+    
     def set_volatility(self, volatility):
         self.volatility = volatility
 

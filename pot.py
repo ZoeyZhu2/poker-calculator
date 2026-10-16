@@ -57,6 +57,4 @@ class Pot():
     def get_player_contributions(self):
         return self.player_contributions
 
-    def get_last_bet(self):
-        return self.last_contribution
 
