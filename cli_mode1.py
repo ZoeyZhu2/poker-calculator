@@ -76,7 +76,8 @@ def main():
             for seat in occupied_seats:
                 if seat != player_seat:
                    player_hands[seat] = [game_deck.deal_card(), game_deck.deal_card()]
-
+            
+            poker_game.post_blinds(small_blind, big_blind)
             num_in, seats_all_in, seat = update_action(poker_game, 0, player_seats, player_hands, small_blind, big_blind)
 
             if num_in > 1:
@@ -139,90 +140,80 @@ def main():
     except QuitGame:
         print("Quitting game")
         return
-    
+
 def update_action(poker_game, betting_round, player_seats, player_hands, small_blind, big_blind, seats_all_in=None):
     # betting_round: 0,1,2,3 for preflop, post flop, post turn, post river
-    if seats_all_in is None:
-        seats_all_in = set()
+    # seats_all_in is no longer needed as input (all-in = in the hand with a stack of 0), kept so the callers don't change
+    seats_in = poker_game.get_seats_in()
     current_equity = poker_game.get_equity()
     print(f"Current equity: {current_equity}")
-    if betting_round == 0:
-        for seat in poker_game.get_occupied_seats():
-            if len(poker_game.get_occupied_seats()) == 2:
-                if poker_game.get_seat_pos(seat) == "BTN":
-                    poker_game.player_bet(seat, small_blind)
-                if poker_game.get_seat_pos(seat) == "BB":
-                    poker_game.player_bet(seat, big_blind)
-            else:
-                if poker_game.get_seat_pos(seat) == "SB":
-                    poker_game.player_bet(seat, small_blind)
-                if poker_game.get_seat_pos(seat) == "BB":
-                    poker_game.player_bet(seat, big_blind)
-    left_to_act = poker_game.get_num_in() - len(seats_all_in)
-    while left_to_act > 0: # until all bets are equal or all ins or whatever (need to write break thing)
-        action_order = poker_game.get_action_order(betting_round, seats_all_in)
-        for seat in action_order:
-            all_in = False
-            curr_max_contribution = poker_game.get_max_contribution()
-            if seat == poker_game.get_own_seat():
-                cost_to_call = poker_game.get_max_contribution() - poker_game.get_own_contribution()
-                print(f"Current EV to call: {poker_game.calculate_ev_call(current_equity, cost_to_call)}")
-                while True:
-                    bet = get_input("Enter how much you want to raise to calculate new EV. Enter 0 to stop.")
-                    if bet.strip() == "0":
-                        break
-                    bet = int(bet)
-                    if bet < cost_to_call:
-                        print("You must input a higher number")
-                        continue
-                    print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet, betting_round)}")
-                stack = poker_game.get_stack(seat)
-                while True:
-                    amount = int(get_input("How much do you bet? (any negative for fold): "))
-                    if amount < 0 or amount == stack: # fold, or all-in (always legal)
-                        break
-                    if amount > stack:
-                        print(f"You only have {stack}.")
-                    elif amount < cost_to_call:
-                        print(f"You must put in at least {cost_to_call}, or fold.")
-                    elif cost_to_call < amount < cost_to_call + big_blind:
-                        print(f"The minimum raise is {cost_to_call + big_blind}.")
-                    else:
-                        break
-            else: # bot bets
-                equity = poker_game.get_equity(seat=seat, hand=player_hands[seat])
-                cost_to_call = poker_game.get_max_contribution() - poker_game.get_seat_contribution(seat)
-                ev_call = poker_game.calculate_ev_call(equity, cost_to_call)
-                pot = poker_game.get_pot()
-                stack = poker_game.get_stack(seat)
-                if stack == 0:
-                    seats_all_in.add(seat)
-                action, amount = player_seats[seat].decision(poker_game, seat, player_hands[seat], stack, ev_call, betting_round, pot, cost_to_call, big_blind)
-                if action != "fold":
-                    print(f"The player in seat {seat} {action}s {amount} ")
-            if amount < 0:
-                poker_game.fold_player(seat)
-                print(f"Player in seat {seat} folds")
-                if seat != poker_game.get_own_seat():
-                    current_equity = poker_game.get_equity()
-                    print(f"Current equity: {current_equity}")
-                if poker_game.get_num_in() == 1:
-                    seat = next(s for s, value in poker_game.get_seats_in().items() if value)
-                    return poker_game.get_num_in(), seats_all_in, seat
-            elif amount == 0:
-                pass # do nothing!
-            else:
-                if amount == poker_game.get_stack(seat):
-                    all_in = True
-                    seats_all_in.add(seat)
-                poker_game.player_bet(seat, amount)
-            # figure out rest of all_in stuff
-            if all_in:
-                left_to_act = poker_game.get_num_in() - len(seats_all_in)
-            elif poker_game.get_max_contribution() != curr_max_contribution:
-                left_to_act = poker_game.get_num_in()
-            left_to_act -= 1
-    return poker_game.get_num_in(), seats_all_in, None
+
+    ring = poker_game.get_action_order(betting_round, set()) # everyone still in the hand, in action order
+
+    def can_act(seat): # still in the hand and has chips left
+        return seats_in[seat] and poker_game.get_stack(seat) > 0
+
+    def all_in_seats():
+        return {s for s in ring if seats_in[s] and poker_game.get_stack(s) == 0}
+
+    to_act = [s for s in ring if can_act(s)] # queue of seats that still have to act
+    while to_act:
+        seat = to_act.pop(0)
+        if not can_act(seat):
+            continue
+        cost_to_call = poker_game.get_max_contribution() - poker_game.get_seat_contribution(seat)
+        if cost_to_call == 0 and sum(1 for s in ring if can_act(s)) == 1:
+            break # everyone else is all-in or folded, so there is nobody to bet against
+        prev_max_contribution = poker_game.get_max_contribution()
+        stack = poker_game.get_stack(seat)
+
+        if seat == poker_game.get_own_seat():
+            print(f"Current EV to call: {poker_game.calculate_ev_call(current_equity, cost_to_call)}")
+            while True:
+                bet = get_input("Enter how much you want to raise to calculate new EV. Enter 0 to stop.")
+                if bet.strip() == "0":
+                    break
+                bet = int(bet)
+                if bet < cost_to_call:
+                    print("You must input a higher number")
+                    continue
+                print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet, betting_round)}")
+            while True:
+                amount = int(get_input("How much do you bet? (any negative for fold): "))
+                if amount < 0 or amount == stack: # fold, or all-in (always legal)
+                    break
+                if amount > stack:
+                    print(f"You only have {stack}.")
+                elif amount < cost_to_call:
+                    print(f"You must put in at least {cost_to_call}, or fold.")
+                elif cost_to_call < amount < cost_to_call + big_blind:
+                    print(f"The minimum raise is {cost_to_call + big_blind}.")
+                else:
+                    break
+        else: # bot bets
+            equity = poker_game.get_equity(seat=seat, hand=player_hands[seat])
+            ev_call = poker_game.calculate_ev_call(equity, cost_to_call)
+            pot = poker_game.get_pot()
+            action, amount = player_seats[seat].decision(poker_game, seat, player_hands[seat], stack, ev_call, betting_round, pot, cost_to_call, big_blind)
+            if action != "fold":
+                print(f"The player in seat {seat} {action}s {amount} ")
+
+        if amount < 0:
+            poker_game.fold_player(seat)
+            print(f"Player in seat {seat} folds")
+            if seat != poker_game.get_own_seat():
+                current_equity = poker_game.get_equity()
+                print(f"Current equity: {current_equity}")
+            if poker_game.get_num_in() == 1:
+                winner = next(s for s, value in seats_in.items() if value)
+                return poker_game.get_num_in(), all_in_seats(), winner
+        elif amount > 0:
+            poker_game.player_bet(seat, amount)
+
+        if poker_game.get_max_contribution() > prev_max_contribution: # a raise: everyone else has to act again
+            i = ring.index(seat)
+            to_act = [s for s in ring[i + 1:] + ring[:i] if can_act(s)]
+    return poker_game.get_num_in(), all_in_seats(), None
 
 
 if __name__ == "__main__":
