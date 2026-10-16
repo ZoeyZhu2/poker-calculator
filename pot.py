@@ -28,38 +28,27 @@ class Pot():
             seven_cards = board_cards + cards
             hands[seat] = evaluation.evaluate_from_seven(seven_cards)
 
-        layers = dict() # contribution amount -> players involved
-        for seat, contribution in self.player_contributions.items():
-            if contribution not in layers:
-                layers[contribution] = [seat]
-            else:
-                layers[contribution].append(seat)
-
-        contributions = sorted(layers.keys(), reverse=True) # contribution amounts in greatest to least
-        for i in range(1, len(contributions)):
-            layers[contributions[i]] += layers[contributions[i-1]]
-        # now layers is contribution threshold -> players involved
-        layer_amounts = dict()
-        for i in range(0, len(contributions) - 1):
-            layer_amounts[contributions[i]] = contributions[i] * len(layers[contributions[i]]) - contributions[i+1] * len(layers[contributions[i]])
-            # need len(layer_amounts[contributions[i]]) for both terms because only the higher threshold players also overlap with the lower threshold
-        layer_amounts[contributions[-1]] = contributions[-1] * len(layers[contributions[-1]])
         payouts = defaultdict(int) # player seat -> payout amount
 
-        for layer, seats in layers.items():
-            winners = list()
-            best_hand = (0,0,0,0,0,0)
-            for seat in seats:
-                if seat not in hands:
-                    continue
-                if hands[seat] > best_hand:
-                    best_hand = hands[seat]
-                    winners = [seat]
-                elif hands[seat] == best_hand:
-                    winners.append(seat)
+        contributions = {seat: c for seat, c in self.player_contributions.items() if c > 0}
+        prev_level = 0
+        for level in sorted(set(contributions.values())):
+            payers = [seat for seat, c in contributions.items() if c >= level]
+            amount = (level - prev_level) * len(payers)
+            prev_level = level
+
+            if len(payers) == 1: # nobody called at this level
+                payouts[payers[0]] += amount
+                continue
+
+            contenders = [seat for seat in payers if seat in hands]
+            best = max(hands[seat] for seat in contenders)
+            winners = [seat for seat in contenders if hands[seat] == best]
+            share, remainder = divmod(amount, len(winners))
             for seat in winners:
-                payouts[seat] += layer_amounts[layer] / len(winners)
-    
+                payouts[seat] += share
+            payouts[winners[0]] += remainder # odd chip goes to the first winner
+        
         return payouts
 
     def get_amount(self):
