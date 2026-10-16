@@ -256,6 +256,15 @@ class PokerGame:
         avg_equities = equities_sum / 10000    
         return avg_equities[0]
 
+    def post_blinds(self, small_blind, big_blind):
+        heads_up = len(self.occupied_seats) == 2
+        for seat in self.occupied_seats:
+            pos = self.rotation[seat]
+            stack = self.stacks[seat]
+            if (pos == "SB" and not heads_up) or (pos == "BTN" and heads_up):
+                self.player_bet(seat, min(small_blind, stack))
+            elif pos == "BB":
+                self.player_bet(seat, min(big_blind, stack))
 
     def get_own_seat(self):
         return self.own_seat
