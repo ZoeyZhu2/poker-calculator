@@ -141,7 +141,7 @@ class PokerGame:
         active_pos = self.get_active_positions(seats_occupied)
         in_positions = [pos for pos in positions if pos in active_pos]
         if rotate == True:
-            self.own_pos = in_positions[(in_positions.index(self.own_pos) + 1) % num_players]
+            self.own_pos = in_positions[(in_positions.index(self.own_pos) - 1) % num_players]
         # seat -> position for both modes
         self.rotation = {self.own_seat: self.own_pos}
         own_pos_idx = in_positions.index(self.own_pos)
@@ -158,6 +158,8 @@ class PokerGame:
         pos_to_seat = {pos: seat for seat, pos in self.rotation.items()} # pos -> seat 
         pos_order = [pos for pos in positions if pos in pos_to_seat]
         start_pos = "UTG" if betting_round == 0 else "SB"
+        if self.num_players == 3:
+            start_pos = "BTN" if betting_round == 0 else "SB"
         if self.num_players == 2:
             start_pos = "BTN" if betting_round == 0 else "BB"
         anchor_idx = pos_order.index(start_pos)  
