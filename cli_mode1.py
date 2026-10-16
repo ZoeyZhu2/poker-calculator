@@ -25,7 +25,7 @@ def main():
                 volatility = 0.2 * int(volatile.strip())
                 aggressive = get_input("How aggressive do you want this bot to be (enter integer 0-5): ")
                 aggressiveness = 0.2 * int(aggressive.strip())
-                loose = get_input("How aggressive do you want this bot to be (enter integer 1-5; 3 is normal, 1 is super tight, 5 is super loose): ")
+                loose = get_input("How loose do you want this bot to be (enter integer 1-5; 3 is normal, 1 is super tight, 5 is super loose): ")
                 looseness = 0.5 + int(loose.strip()) * 0.25
             new_bot = bot.bot(volatility, aggressiveness, looseness)
             bots.append(new_bot)
