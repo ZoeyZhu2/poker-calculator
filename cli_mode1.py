@@ -73,12 +73,9 @@ def main():
             player_hands[player_seat] = own_hand
             print(f"This is your hand: {own_hand}")
             print(f"This is your seat and position: Seat {player_seat} {poker_game.get_own_pos()}")
-            current_seat = 1
-            for b in bots:
-                if current_seat == player_seat:
-                    current_seat += 1
-                player_hands[current_seat] = [game_deck.deal_card(), game_deck.deal_card()]
-                current_seat += 1
+            for seat in occupied_seats:
+                if seat != player_seat:
+                   player_hands[seat] = [game_deck.deal_card(), game_deck.deal_card()]
 
             num_in, seats_all_in, seat = update_action(poker_game, 0, player_seats, player_hands, small_blind, big_blind)
 
@@ -130,7 +127,15 @@ def main():
             own_hand.append(game_deck.deal_card())
 
             stacks = poker_game.get_stacks()
+            occupied_seats = [s for s in occupied_seats if stacks[s] > 0]
+            if player_seat not in occupied_seats:
+                print("You're out of chips. Game over.")
+                break
+            if len(occupied_seats) == 1:
+                print("You win!")
+                break
             poker_game.new_round(own_hand, occupied_seats, player_seat, stacks)
+    
     except QuitGame:
         print("Quitting game")
         return
@@ -142,8 +147,8 @@ def update_action(poker_game, betting_round, player_seats, player_hands, small_b
     current_equity = poker_game.get_equity()
     print(f"Current equity: {current_equity}")
     if betting_round == 0:
-        for seat in player_seats:
-            if len(player_seats) == 2:
+        for seat in poker_game.get_occupied_seats():
+            if len(poker_game.get_occupied_seats()) == 2:
                 if poker_game.get_seat_pos(seat) == "BTN":
                     poker_game.player_bet(seat, small_blind)
                 if poker_game.get_seat_pos(seat) == "BB":

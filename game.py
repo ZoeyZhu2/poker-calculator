@@ -36,7 +36,11 @@ class PokerGame:
             self.own_pos = random.choice(tuple(active_pos))
         else:
             self.own_pos = own_pos
-        self.populate_positions(occupied_seats)
+
+        num_players = len(occupied_seats)
+        in_positions = [p for p in positions if p in self.get_active_positions(occupied_seats)]
+        self.button_seat = occupied_seats[(occupied_seats.index(own_seat) - in_positions.index(self.own_pos)) % num_players]
+        self.populate_positions(occupied_seats, self.button_seat)
 
         
     def update_traits(self, seat: int, looseness):
@@ -104,7 +108,9 @@ class PokerGame:
         self.own_hand = own_hand
         self.num_players = len(seats_occupied)
         self.num_in = len(seats_occupied)
-        self.populate_positions(seats_occupied, rotate=True)
+        self.occupied_seats = seats_occupied
+        self.button_seat = self.next_seat_after(self.button_seat, seats_occupied)
+        self.populate_positions(seats_occupied, self.button_seat)        
         self.pot = pot.Pot()
         self.stacks = stacks
         self.board_cards = []
@@ -132,26 +138,25 @@ class PokerGame:
             active_pos.add("UTG+2")
         return active_pos
     
-    def populate_positions(self, seats_occupied, rotate=False):
+    def populate_positions(self, seats_occupied, button_seat):
         # position -> in game? for both modes
         self.seats_in = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False, 8: False, 9: False}
-        for num in seats_occupied:
-            self.seats_in[num] = True
+        for s in seats_occupied:
+            self.seats_in[s] = True
         num_players = len(seats_occupied)
         active_pos = self.get_active_positions(seats_occupied)
         in_positions = [pos for pos in positions if pos in active_pos]
-        if rotate == True:
-            self.own_pos = in_positions[(in_positions.index(self.own_pos) - 1) % num_players]
-        # seat -> position for both modes
-        self.rotation = {self.own_seat: self.own_pos}
-        own_pos_idx = in_positions.index(self.own_pos)
-        next_pos_idx = (own_pos_idx + 1) % num_players
-        own_seat_idx = seats_occupied.index(self.own_seat)
-        next_seat_idx = (own_seat_idx + 1) % num_players
-        while next_seat_idx != own_seat_idx:
-            self.rotation[seats_occupied[next_seat_idx]] = in_positions[next_pos_idx]
-            next_pos_idx = (next_pos_idx + 1) % num_players
-            next_seat_idx = (next_seat_idx + 1) % num_players
+        btn_idx = seats_occupied.index(button_seat)
+        self.rotation = {}
+        for i in range(num_players):
+            self.rotation[seats_occupied[(btn_idx + i) % num_players]] = in_positions[i]
+        self.own_pos = self.rotation[self.own_seat]
+
+    def next_seat_after(self, seat, seats_occupied):
+        for step in range(1, 10):
+            s = (seat - 1 + step) % 9 + 1
+            if s in seats_occupied:
+                return s
 
     def get_action_order(self, betting_round, seats_all_in):
         # betting_round: 0,1,2,3 for preflop, post flop, post turn, post river
