@@ -176,7 +176,19 @@ def update_action(poker_game, betting_round, player_seats, player_hands, small_b
                         print("You must input a higher number")
                         continue
                     print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet, betting_round)}")
-                amount = int(get_input("How much do you bet? (any negative for fold): "))
+                stack = poker_game.get_stack(seat)
+                while True:
+                    amount = int(get_input("How much do you bet? (any negative for fold): "))
+                    if amount < 0 or amount == stack: # fold, or all-in (always legal)
+                        break
+                    if amount > stack:
+                        print(f"You only have {stack}.")
+                    elif amount < cost_to_call:
+                        print(f"You must put in at least {cost_to_call}, or fold.")
+                    elif cost_to_call < amount < cost_to_call + big_blind:
+                        print(f"The minimum raise is {cost_to_call + big_blind}.")
+                    else:
+                        break
             else: # bot bets
                 equity = poker_game.get_equity(seat=seat, hand=player_hands[seat])
                 cost_to_call = poker_game.get_max_contribution() - poker_game.get_seat_contribution(seat)
@@ -185,8 +197,7 @@ def update_action(poker_game, betting_round, player_seats, player_hands, small_b
                 stack = poker_game.get_stack(seat)
                 if stack == 0:
                     seats_all_in.add(seat)
-                last_bet = poker_game.get_last_bet()
-                action, amount = player_seats[seat].decision(poker_game, seat, player_hands[seat], stack, ev_call, betting_round, pot, cost_to_call, last_bet, big_blind)
+                action, amount = player_seats[seat].decision(poker_game, seat, player_hands[seat], stack, ev_call, betting_round, pot, cost_to_call, big_blind)
                 if action != "fold":
                     print(f"The player in seat {seat} {action}s {amount} ")
             if amount < 0:
