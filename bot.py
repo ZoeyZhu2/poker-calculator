@@ -1,5 +1,4 @@
 import random
-import game
 
 class bot():
 
