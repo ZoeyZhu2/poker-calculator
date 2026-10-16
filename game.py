@@ -9,11 +9,9 @@ positions = ["BTN", "SB", "BB", "UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO"]
 
 
 class PokerGame:
-    def __init__(self, own_hand: list, own_pos: str, own_seat: int, occupied_seats: list, stacks: dict, board_cards: list):
+    def __init__(self, own_hand: list, own_seat: int, occupied_seats: list, stacks: dict, board_cards: list, own_pos=None):
         # own_hand is a list of two cards ex: ["Ah", "Kd"]
         self.own_hand = own_hand
-        # own_pos is a string representing position ex: "BTN"
-        self.own_pos = own_pos
         # own_seat is an integer representing seat number
         self.own_seat = own_seat
         # own_seat is an integer representing own stack amount
@@ -26,13 +24,20 @@ class PokerGame:
         self.num_in = len(occupied_seats)
         # board cards is a list of any community cards already dealt out ex: ["2s", "7d", "5h"]
         self.board_cards = board_cards
-        self.populate_positions(occupied_seats)
         # pot keeps track of the pot
         self.pot = pot.Pot()
         # seat -> bot for mode 1
         # self.bots = {1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None}
         # seat -> looseness for mode 2 (eventually volatility and aggressiveness will be added)
         self.traits = {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0}
+        if own_pos is None:
+            active_pos = self.get_active_positions(occupied_seats)
+            # own_pos is a string representing position ex: "BTN"
+            self.own_pos = random.choice(tuple(active_pos))
+        else:
+            self.own_pos = own_pos
+        self.populate_positions(occupied_seats)
+
         
     def update_traits(self, seat: int, looseness):
         self.traits[seat] = looseness
@@ -104,12 +109,7 @@ class PokerGame:
         self.stacks = stacks
         self.board_cards = []
 
-
-    def populate_positions(self, seats_occupied, rotate=False):
-        # position -> in game? for both modes
-        self.seats_in = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False, 8: False, 9: False}
-        for num in seats_occupied:
-            self.seats_in[num] = True
+    def get_active_positions(self, seats_occupied):
         num_players = len(seats_occupied)
         active_pos = set()
         if num_players > 1:
@@ -130,6 +130,15 @@ class PokerGame:
             active_pos.add("UTG+1")
         if num_players > 8:
             active_pos.add("UTG+2")
+        return active_pos
+    
+    def populate_positions(self, seats_occupied, rotate=False):
+        # position -> in game? for both modes
+        self.seats_in = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False, 8: False, 9: False}
+        for num in seats_occupied:
+            self.seats_in[num] = True
+        num_players = len(seats_occupied)
+        active_pos = self.get_active_positions(seats_occupied)
         in_positions = [pos for pos in positions if pos in active_pos]
         if rotate == True:
             self.own_pos = in_positions[(in_positions.index(self.own_pos) + 1) % num_players]

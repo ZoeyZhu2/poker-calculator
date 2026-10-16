@@ -18,7 +18,7 @@ def main():
             occupied_seats.append(curr_seat)
             curr_stack = int(get_input(f"What is the stack size of the player at seat {curr_seat} (format: 100)? "))
             stacks[curr_seat] = curr_stack                 
-        poker_game = game.PokerGame(own_hand, own_pos, own_seat, occupied_seats, stacks, [])
+        poker_game = game.PokerGame(own_hand, own_seat, occupied_seats, stacks, [], own_pos)
 
         while True:
             num_in, seats_all_in, seat = update_action(poker_game, 0)

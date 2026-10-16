@@ -30,27 +30,6 @@ def main():
             new_bot = bot.bot(volatility, aggressiveness, looseness)
             bots.append(new_bot)
 
-        # getting active positions
-        active_pos = list()
-        if num_players > 1:
-            active_pos.append("BTN")
-            active_pos.append("BB")
-            # this is so ranges are more accurate in heads-up
-        if num_players > 2:
-            active_pos.append("SB")
-        if num_players > 3:
-            active_pos.append("UTG")
-        if num_players > 4:
-            active_pos.append("CO")
-        if num_players > 5:
-            active_pos.append("HJ")
-        if num_players > 6:
-            active_pos.append("LJ")
-        if num_players > 7:
-            active_pos.append("UTG+1")
-        if num_players > 8:
-            active_pos.append("UTG+2")
-
         # setting stack sizes and big_blinds
         stack_size = int(get_input("What do you want initial stack size to be?"))
         big_blind = int(get_input("What do you want big blind to be?"))
@@ -78,9 +57,6 @@ def main():
         # assigning community cards
         board_cards = []
 
-        # assigning position
-        player_pos = random.choice(active_pos)
-
         # making list of seats
         occupied_seats = [i for i in range(1, num_players + 1)]
 
@@ -92,11 +68,11 @@ def main():
 
         player_hands = dict() # seat -> hands
     
-        poker_game = game.PokerGame(own_hand, player_pos, player_seat, occupied_seats, stacks, board_cards)
+        poker_game = game.PokerGame(own_hand, player_seat, occupied_seats, stacks, board_cards)
         while True:
             player_hands[player_seat] = own_hand
             print(f"This is your hand: {own_hand}")
-            print(f"This is your seat and position: Seat {player_seat} {player_pos}")
+            print(f"This is your seat and position: Seat {player_seat} {poker_game.get_own_pos()}")
             current_seat = 1
             for b in bots:
                 if current_seat == player_seat:
