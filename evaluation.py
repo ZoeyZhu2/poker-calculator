@@ -55,7 +55,6 @@ def evaluate_hand(hand): # can evaluate 5
     ranks = [card[0] for card in cards_parsed]
     ranks = sorted(ranks)
     rank_freq = Counter(ranks) # creates dict of element: frequency
-    freq_list = sorted(rank_freq.values(), reverse=True)
     quad_rank = [rank for rank, freq in rank_freq.items() if freq == 4]
     trip_rank = [rank for rank, freq in rank_freq.items() if freq == 3]
     pairs_rank = sorted([rank for rank, freq in rank_freq.items() if freq == 2], reverse=True)

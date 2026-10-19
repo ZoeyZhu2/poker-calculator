@@ -272,21 +272,11 @@ class PokerGame:
     def get_max_contribution(self):
         return max(self.get_player_contributions().values())
 
-    def get_own_contribution(self):
-        return self.get_player_contributions()[self.own_seat] 
-
     def get_seat_contribution(self, seat):
         return self.get_player_contributions()[seat] 
 
     def get_stack(self, seat):
         return self.stacks[seat]
-
-    def set_stack(self, seat, amount):
-        self.stacks[seat] = amount
-
-    def set_all_stacks(self, amount):
-        for seat in self.seats_in:
-            self.stacks[seat] = amount
 
     def get_pot(self):
         return self.pot.get_amount()

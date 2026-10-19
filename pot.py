@@ -8,12 +8,10 @@ class Pot():
         self.player_contributions = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0} # seat -> contribution
         # players -> contributions
         self.amount = 0
-        self.last_contribution = 0
 
     def add_contribution(self, seat, amount):
         self.player_contributions[seat] += amount
         self.amount += amount
-        self.last_contribution = amount
 
     def calculate_payout(self, player_cards, board_cards):
         # evaluate final equities of player_cards
