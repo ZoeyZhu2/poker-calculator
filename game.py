@@ -151,40 +151,44 @@ class PokerGame:
     def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None, n_sims=1000):
         # note: opponent reraise will be built later
         # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
-        # p_fold and p_call will be averagse
         # p_call as it is is probability of continuining (so call and reraise included)
         if seat is None:
             seat = self.own_seat
         if hand is None:
             hand = self.own_hand
         heads_up = self.num_players == 2
-        num_opp_in = 0
-        p_fold = 0
-        p_cont = 0
+        pot = self.pot.get_amount()
+        board_texture = position_ranges.get_board_texture(self.board_cards)
+        fold_probs = [] # one entry per opponent who still has chips behind
+        num_all_in = 0 # all-in opponents always continue
         for s, value in self.seats_in.items():
-            if s == seat:
+            if s == seat or not value:
                 continue
-            if value:
-                if self.stacks[s] == 0:
-                    num_opp_in += 1
-                    p_cont += 1
-                else: 
-                    num_opp_in += 1
-                    pos = self.rotation[s]
-                    board_texture = position_ranges.get_board_texture(self.board_cards)
-                    prob_fold = position_ranges.get_prob_fold(pos, self.traits[s], bet, self.pot.get_amount(), self.stacks[s], betting_round, board_texture, heads_up=heads_up)
-                    p_fold += prob_fold
-                    p_cont += 1 - prob_fold
-        p_fold = p_fold / num_opp_in
-        p_cont = min(p_cont / num_opp_in, 1)
-        bet_ratio = bet / self.pot.get_amount()
-        scale_factor = 0.5
+            if self.stacks[s] == 0:
+                num_all_in += 1
+            else:
+                pos = self.rotation[s]
+                fold_probs.append(position_ranges.get_prob_fold(pos, self.traits[s], bet, pot, self.stacks[s], betting_round, board_texture, heads_up=heads_up))
+
+        # only win the pot uncontested if EVERY opponent folds
+        p_all_fold = 0 if num_all_in > 0 else 1
+        for pf in fold_probs:
+            p_all_fold *= pf
+        if p_all_fold == 1:
+            return pot
+        p_cont = 1 - p_all_fold # prob of round continuing
+        # expected callers overall, then divided by p_cont to get callers given that someone called
+        expected_callers = num_all_in + sum(1 - pf for pf in fold_probs)
+        callers_if_cont = expected_callers / p_cont # expected value removing the p_fold from the calculation
+
+        bet_ratio = bet / pot
+        scale_factor = 0.3 # arbitrary. how much tighter opponents will get with bet-sizing
         tightness = bet_ratio * scale_factor
         new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims)
 
-        ev = p_fold * self.pot.get_amount() + p_cont * (new_equity * (self.pot.get_amount() + ( num_opp_in + 1) * bet) - bet)
-
+        ev = p_all_fold * pot + p_cont * (new_equity * (pot + (callers_if_cont + 1) * bet) - bet)
         return ev
+
 
     def get_bet_equity(self, tightness=0, seat=None, hand=None,n_sims=1000):
         if seat is None:
