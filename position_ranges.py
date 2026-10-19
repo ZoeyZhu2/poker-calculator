@@ -105,18 +105,16 @@ def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, boar
     if betting_round == 0: # pre-flop
         ranges = HEADS_UP_RANGES_PRE if heads_up else DEFAULT_RANGES_PRE
         looseness = ranges[pos] * looseness
-        p_fold = (adjusted_bet_to_pot + bet_to_stack) / looseness
+        p_fold = (adjusted_bet_to_pot + bet_to_stack) * (1 - min(looseness, 1)) # super loose, then they won't fold
 
     else:
         ranges = HEADS_UP_LOOSENESS_POST if heads_up else DEFAULT_LOOSENESS_POST
         looseness = ranges[pos] * looseness
-        p_fold = (adjusted_bet_to_pot + bet_to_stack + board_textures * 2) / looseness
+        p_fold = (adjusted_bet_to_pot + bet_to_stack + board_textures * 2) * (1 - looseness / 2) # /2 is arbitrary
 
-
-    # how do I work in board_textures
-    # need to work out potential coefficients/constants
-    p_fold = min(p_fold, 1)
+    p_fold = min(p_fold, 0.95)
     p_fold = max(0, p_fold)
+
     return p_fold
 
 def get_prob_cont(pos, looseness, bet, pot_size, stack_size, betting_round, board_textures, heads_up=False):
