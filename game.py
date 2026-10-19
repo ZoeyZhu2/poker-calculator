@@ -160,15 +160,20 @@ class PokerGame:
         pot = self.pot.get_amount()
         board_texture = position_ranges.get_board_texture(self.board_cards)
         fold_probs = [] # one entry per opponent who still has chips behind
+        fold_by_seat = dict() # seat -> fold probability
+        all_in_seats = []
         num_all_in = 0 # all-in opponents always continue
         for s, value in self.seats_in.items():
             if s == seat or not value:
                 continue
             if self.stacks[s] == 0:
                 num_all_in += 1
+                all_in_seats.append(s)
             else:
                 pos = self.rotation[s]
-                fold_probs.append(position_ranges.get_prob_fold(pos, self.traits[s], bet, pot, self.stacks[s], betting_round, board_texture, heads_up=heads_up))
+                pf = position_ranges.get_prob_fold(pos, self.traits[s], bet, pot, self.stacks[s], betting_round, board_texture, heads_up=heads_up)
+                fold_probs.append(pf)
+                fold_by_seat[s] = pf
 
         # only win the pot uncontested if EVERY opponent folds
         p_all_fold = 0 if num_all_in > 0 else 1
@@ -184,13 +189,18 @@ class PokerGame:
         bet_ratio = bet / pot
         scale_factor = 0.3 # arbitrary. how much tighter opponents will get with bet-sizing
         tightness = bet_ratio * scale_factor
-        new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims)
+
+
+        num_callers = max(1, round(callers_if_cont)) - num_all_in # excluding all-ins!
+        likely = sorted(fold_by_seat, key=fold_by_seat.get)[:max(num_callers, 0)] # the seats of the callers
+        continuing = set(all_in_seats) | set(likely) # this is now all the callers
+        new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing) # only calculate equity against continuing players
 
         ev = p_all_fold * pot + p_cont * (new_equity * (pot + (callers_if_cont + 1) * bet) - bet)
         return ev
 
 
-    def get_bet_equity(self, tightness=0, seat=None, hand=None,n_sims=1000):
+    def get_bet_equity(self, tightness=0, seat=None, hand=None,n_sims=1000,only_seats=None):
         if seat is None:
             seat = self.own_seat
         if hand is None:
@@ -199,7 +209,7 @@ class PokerGame:
         dead = set(hand) | set(self.board_cards)
         ranges = dict() # position -> all unblocked range hands
         for key, value in self.seats_in.items():
-            if key == seat:
+            if key == seat or (only_seats is not None and key not in only_seats):
                 continue
             if value is True:
                 pos = self.rotation[key]
@@ -277,6 +287,7 @@ class PokerGame:
 
     def get_stack(self, seat):
         return self.stacks[seat]
+
 
     def get_pot(self):
         return self.pot.get_amount()

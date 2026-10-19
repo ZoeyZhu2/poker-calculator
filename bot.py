@@ -55,7 +55,8 @@ class bot():
                 raise_options.append(("raise", bet, adjusted_ev_raise))
             best_raise = max(raise_options, key=lambda option: option[2])
             # applying aggressiveness to raising:
-            options.append((best_raise[0], best_raise[1], best_raise[2] + self.aggressiveness * big_blind))
+            bonus = self.aggressiveness * big_blind if best_raise[2] > 0 else 0 # aggression never makes a losing raise beat folding
+            options.append((best_raise[0], best_raise[1], best_raise[2] + bonus))
 
         best_option = max(options, key=lambda option: option[2])
         return best_option[0], best_option[1]
