@@ -47,41 +47,8 @@ class PokerGame:
         self.traits[seat] = looseness
 
     # getting range equities (so an estimation)
-    def get_equity(self, seat=None, hand=None):
-        if seat is None:
-            seat = self.own_seat
-        if hand is None:
-            hand = self.own_hand
-        heads_up = self.num_players == 2
-        ranges = dict() # position -> all range hands
-        for key, value in self.seats_in.items():
-            if key == seat:
-                continue
-            if value is True:
-                pos = self.rotation[key]
-                ranges[pos] = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=self.traits[key])
-        equities_sum = np.zeros(len(ranges) + 1)
-        for i in range(10000):
-            pocket_list = [hand]
-            selected_cards = set()
-            for card in hand:
-                selected_cards.add(card)
-            for card in self.board_cards:
-                selected_cards.add(card)
-            for key, value in ranges.items():
-                random_cards = random.choice(value)
-                card1, card2 = random_cards
-                while card1 in selected_cards or card2 in selected_cards:
-                    random_cards = random.choice(value)
-                    card1, card2 = random_cards
-                selected_cards.add(card1)
-                selected_cards.add(card2)
-                pocket_list.append(random_cards)
-            # only testing one combination of community cards per combinations of hands:
-            equity_list = equity_calculator.calculate_equity(pocket_list, self.board_cards, 1)
-            equities_sum = equities_sum + np.array(equity_list)
-        avg_equities = equities_sum / 10000    
-        return avg_equities[0]
+    def get_equity(self, seat=None, hand=None, n_sims=5000):
+        return self.get_bet_equity(tightness=0, seat=seat, hand=hand, n_sims=n_sims)
     
     def fold_player(self, seat):
         self.seats_in[seat] = False
@@ -181,7 +148,7 @@ class PokerGame:
     def calculate_ev_call(self, equity, cost_to_call):
         return equity * (self.pot.get_amount() + cost_to_call) - cost_to_call
 
-    def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None):
+    def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None, n_sims=1000):
         # note: opponent reraise will be built later
         # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
         # p_fold and p_call will be averagse
@@ -213,47 +180,58 @@ class PokerGame:
         bet_ratio = bet / self.pot.get_amount()
         scale_factor = 0.5
         tightness = bet_ratio * scale_factor
-        new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand)
+        new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims)
 
         ev = p_fold * self.pot.get_amount() + p_cont * (new_equity * (self.pot.get_amount() + ( num_opp_in + 1) * bet) - bet)
 
         return ev
 
-    def get_bet_equity(self, tightness=0, seat=None, hand=None):
+    def get_bet_equity(self, tightness=0, seat=None, hand=None,n_sims=1000):
         if seat is None:
             seat = self.own_seat
         if hand is None:
             hand = self.own_hand
         heads_up = self.num_players == 2
-        ranges = dict() # position -> all range hands
+        dead = set(hand) | set(self.board_cards)
+        ranges = dict() # position -> all unblocked range hands
         for key, value in self.seats_in.items():
             if key == seat:
                 continue
             if value is True:
                 pos = self.rotation[key]
                 looseness = max(self.traits[key]-tightness, 0)
-                ranges[pos] = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
+                while True:
+                    range_hands = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
+                    live = [c for c in range_hands if c[0] not in dead and c[1] not in dead]
+                    if len(live) >= 6 or looseness > 3: # arbitrary live and arbitrary looseness cutoff
+                        break
+                    looseness += 0.05 # widening looseness until a possible card ischosen
+                ranges[pos] = live
         equities_sum = np.zeros(len(ranges) + 1)
-        for i in range(10000):
+        completed = 0
+        for i in range(n_sims):
             pocket_list = [hand]
-            selected_cards = set()
-            for card in hand:
-                selected_cards.add(card)
-            for card in self.board_cards:
-                selected_cards.add(card)
+            selected_cards = set(dead)
+            all_dealt = True
             for key, value in ranges.items():
-                random_cards = random.choice(value)
-                card1, card2 = random_cards
-                while card1 in selected_cards or card2 in selected_cards:
+                dealt = False
+                for _ in range(50):
                     random_cards = random.choice(value)
                     card1, card2 = random_cards
+                    if card1 not in selected_cards and card2 not in selected_cards:
+                        dealt = True
+                        break
+                if not dealt:
+                    all_dealt = False
+                    break
                 selected_cards.add(card1)
                 selected_cards.add(card2)
                 pocket_list.append(random_cards)
-            # only testing one combination of community cards per combinations of hands:
-            equity_list = equity_calculator.calculate_equity(pocket_list, self.board_cards, 1)
-            equities_sum = equities_sum + np.array(equity_list)
-        avg_equities = equities_sum / 10000    
+            if all_dealt:
+                equity_list = equity_calculator.calculate_equity(pocket_list, self.board_cards, 1)
+                equities_sum = equities_sum + np.array(equity_list)
+                completed += 1
+        avg_equities = equities_sum / max(completed, 1)
         return avg_equities[0]
 
     def post_blinds(self, small_blind, big_blind):

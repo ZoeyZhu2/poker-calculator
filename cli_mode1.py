@@ -191,7 +191,7 @@ def update_action(poker_game, betting_round, player_seats, player_hands, small_b
                 else:
                     break
         else: # bot bets
-            equity = poker_game.get_equity(seat=seat, hand=player_hands[seat])
+            equity = poker_game.get_equity(seat=seat, hand=player_hands[seat], n_sims=1000)
             ev_call = poker_game.calculate_ev_call(equity, cost_to_call)
             pot = poker_game.get_pot()
             action, amount = player_seats[seat].decision(poker_game, seat, player_hands[seat], stack, ev_call, betting_round, pot, cost_to_call, big_blind)
