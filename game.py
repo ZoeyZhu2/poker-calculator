@@ -249,6 +249,20 @@ class PokerGame:
             elif pos == "BB":
                 self.player_bet(seat, min(big_blind, stack))
 
+    def to_snapshot(self):
+        snapshot = dict()
+        snapshot["own_seat"] = self.own_seat
+        snapshot["own_hand"] = list(self.own_hand)
+        snapshot["num_players"] = self.num_players
+        snapshot["board_cards"] = list(self.board_cards)
+        snapshot["pot_size"] = self.pot.get_amount()
+        snapshot["contributions"] = dict(self.get_player_contributions())
+        snapshot["seats_in"] = dict(self.seats_in)
+        snapshot["stacks"] = dict(self.stacks)
+        snapshot["rotation"] = dict(self.rotation)
+        snapshot["traits"] = dict(self.traits)
+        return snapshot
+
     def get_own_seat(self):
         return self.own_seat
 
