@@ -187,7 +187,7 @@ class PokerGame:
         continuing = set(all_in_seats) | set(likely) # this is now all the callers
         new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing) # only calculate equity against continuing players
 
-        ev = p_all_fold * pot + p_cont * (new_equity * (pot_size + (callers_if_cont + 1) * bet) - bet)
+        ev = p_all_fold * pot_size + p_cont * (new_equity * (pot_size + (callers_if_cont + 1) * bet) - bet)
         return ev
 
 
