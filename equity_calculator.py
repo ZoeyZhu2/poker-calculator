@@ -9,55 +9,6 @@ deck = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
         "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "Th", "Jh", "Qh", "Kh", "Ah", 
         "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "Ts", "Js", "Qs", "Ks", "As"}
 
-# Calculate equity for two players 
-# def calculate_equity(pocket1, pocket2, community_cards, num_simulations=-1):
-#     # pocket1, pocket2: list of 2 cards each (e.g., ['Ah', 'Kd'])
-#     # community_cards: list of 0-4 cards (e.g., ['5h', '5c', '5d'])
-#     # returns: float between 0 and 1 (win probability of pocket 1)
-    
-#     if len(community_cards) == 5:
-#         hand1 = evaluation.evaluate_hand(pocket1 + community_cards)
-#         hand2 = evaluation.evaluate_hand(pocket2 + community_cards)
-#         if hand1 > hand2:
-#             return 1.0
-#         elif hand1 == hand2:
-#             return 0.5
-#         else:
-#             return 0.0
-
-#     known_cards = pocket1 + pocket2 + community_cards
-#     remaining_deck = deck - set(known_cards)
-#     num_cards_needed = 5 - len(community_cards)
-
-#     wins = 0
-#     total = 0
-
-#     # the exact way
-#     if num_simulations == -1:
-#         futures = itertools.combinations(remaining_deck, num_cards_needed) # returns list of tuples
-#         for future in futures:
-#             total += 1
-#             board = community_cards + list(future)
-#             hand1 = evaluation.evaluate_from_seven(pocket1 + board)
-#             hand2 = evaluation.evaluate_from_seven(pocket2 + board)
-#             if hand1 > hand2:
-#                 wins += 1
-#             if hand1 == hand2:
-#                 wins += 0.5
-#     # faster approximation
-#     else:
-#         for _ in range(num_simulations):
-#             future = random.sample(list(remaining_deck), num_cards_needed)
-#             total += 1
-#             board = community_cards + future
-#             hand1 = evaluation.evaluate_from_seven(pocket1 + board)
-#             hand2 = evaluation.evaluate_from_seven(pocket2 + board)
-#             if hand1 > hand2:
-#                 wins += 1
-#             if hand1 == hand2:
-#                 wins += 0.5
-#     return wins/total
-
 # N number of players
 def calculate_equity(pockets_list, community_cards, num_simulations=-1):
     # pockets_list: list of each player's pocket, which is a list of 2 cards (e.g., ['Ah', 'Kd'])
@@ -154,18 +105,3 @@ def calculate_equity(pockets_list, community_cards, num_simulations=-1):
                 current_wins[index] = equity
             wins = wins + current_wins
     return wins/total
-
-# # Test
-# # 3 players, flat board
-# equity = calculate_equity(
-#     [['Ah', 'Kh'], ['Ad', 'Kd'], ['2c', '3c']],
-#     ['5h', '5c', '5d']
-# )
-# print(f"Calculated equity: {equity}; expected equity: [0.35, 0.35, 0.30]")
-
-# # Same pocket (tie)
-# equity = calculate_equity(
-#     [['Ah', 'Kh'], ['Ah', 'Kh']],
-#     ['5h', '5c', '5d']
-# )
-# print(f"Calculated equity: {equity}; expected equity: [0.5, 0.5]")
