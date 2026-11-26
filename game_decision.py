@@ -88,15 +88,15 @@ def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=100
     for key, value in seats_in.items():
         if key == seat or (only_seats is not None and key not in only_seats):
             continue
-        if value is True:
+        if value:
             pos = rotation[key]
             looseness = max(traits[key]-tightness, 0)
             while True:
                 range_hands = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
                 live = [c for c in range_hands if c[0] not in dead and c[1] not in dead]
-                if len(live) >= 6 or looseness > 3: # arbitrary live and arbitrary looseness cutoff
+                if len(live) >= 6: # arbitrary live cutoff
                     break
-                looseness += 0.05 # widening looseness until a possible card ischosen
+                looseness += 0.05 # widening looseness until a possible card is chosen
             ranges[pos] = live
     equities_sum = np.zeros(len(ranges) + 1)
     completed = 0
