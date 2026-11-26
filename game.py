@@ -172,13 +172,13 @@ class PokerGame:
         for pf in fold_probs:
             p_all_fold *= pf
         if p_all_fold == 1:
-            return pot
+            return pot_size
         p_cont = 1 - p_all_fold # prob of round continuing
         # expected callers overall, then divided by p_cont to get callers given that someone called
         expected_callers = num_all_in + sum(1 - pf for pf in fold_probs)
         callers_if_cont = expected_callers / p_cont # expected value removing the p_fold from the calculation
 
-        bet_ratio = bet / pot
+        bet_ratio = bet / pot_size
         scale_factor = 0.3 # arbitrary. how much tighter opponents will get with bet-sizing
         tightness = bet_ratio * scale_factor
 
@@ -187,7 +187,7 @@ class PokerGame:
         continuing = set(all_in_seats) | set(likely) # this is now all the callers
         new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing) # only calculate equity against continuing players
 
-        ev = p_all_fold * pot + p_cont * (new_equity * (pot + (callers_if_cont + 1) * bet) - bet)
+        ev = p_all_fold * pot + p_cont * (new_equity * (pot_size + (callers_if_cont + 1) * bet) - bet)
         return ev
 
 
