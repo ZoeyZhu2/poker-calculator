@@ -10,26 +10,17 @@ positions = ["BTN", "SB", "BB", "UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO"]
 
 class PokerGame:
     def __init__(self, own_hand: list, own_seat: int, occupied_seats: list, stacks: dict, board_cards: list, own_pos=None):
-        # own_hand is a list of two cards ex: ["Ah", "Kd"]
-        self.own_hand = own_hand
-        # own_seat is an integer representing seat number
-        self.own_seat = own_seat
-        # own_seat is an integer representing own stack amount
-        # stacks keeps track of seat -> stack
-        self.stacks = stacks
+        self.own_hand = own_hand    # list of two cards ex: ["Ah", "Kd"]
+        self.own_seat = own_seat    # integer representing seat number
+        self.stacks = stacks        # dict: seat -> stack
         self.own_stack = self.stacks[self.own_seat]
-        # occupied_seats is a list of integers
-        self.occupied_seats = occupied_seats
+        self.occupied_seats = occupied_seats # list of integers
         self.num_players = len(occupied_seats)
         self.num_in = len(occupied_seats)
-        # board cards is a list of any community cards already dealt out ex: ["2s", "7d", "5h"]
-        self.board_cards = board_cards
-        # pot keeps track of the pot
-        self.pot = pot.Pot()
-        # seat -> bot for mode 1
-        # self.bots = {1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None}
-        # seat -> looseness for mode 2 (eventually volatility and aggressiveness will be added)
-        self.traits = {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0}
+        self.board_cards = board_cards # list of any community cards already dealt out ex: ["2s", "7d", "5h"]
+        self.pot = pot.Pot() # pot keeps track of the pot
+        self.traits = {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0} # looseness for each seat
+        
         if own_pos is None:
             active_pos = self.get_active_positions(occupied_seats)
             # own_pos is a string representing position ex: "BTN"
@@ -37,9 +28,8 @@ class PokerGame:
         else:
             self.own_pos = own_pos
 
-        num_players = len(occupied_seats)
         in_positions = [p for p in positions if p in self.get_active_positions(occupied_seats)]
-        self.button_seat = occupied_seats[(occupied_seats.index(own_seat) - in_positions.index(self.own_pos)) % num_players]
+        self.button_seat = occupied_seats[(occupied_seats.index(own_seat) - in_positions.index(self.own_pos)) % self.num_players]
         self.populate_positions(occupied_seats, self.button_seat)
 
         
@@ -47,6 +37,7 @@ class PokerGame:
         self.traits[seat] = looseness
 
     # getting range equities (so an estimation)
+    # wrapper function
     def get_equity(self, seat=None, hand=None, n_sims=5000):
         return self.get_bet_equity(tightness=0, seat=seat, hand=hand, n_sims=n_sims)
     
@@ -108,7 +99,6 @@ class PokerGame:
         return active_pos
     
     def populate_positions(self, seats_occupied, button_seat):
-        # position -> in game? for both modes
         self.seats_in = {1: False, 2: False, 3: False, 4: False, 5: False, 6: False, 7: False, 8: False, 9: False}
         for s in seats_occupied:
             self.seats_in[s] = True
@@ -157,7 +147,7 @@ class PokerGame:
         if hand is None:
             hand = self.own_hand
         heads_up = self.num_players == 2
-        pot = self.pot.get_amount()
+        pot_size = self.pot.get_amount()
         board_texture = position_ranges.get_board_texture(self.board_cards)
         fold_probs = [] # one entry per opponent who still has chips behind
         fold_by_seat = dict() # seat -> fold probability
@@ -171,7 +161,9 @@ class PokerGame:
                 all_in_seats.append(s)
             else:
                 pos = self.rotation[s]
-                pf = position_ranges.get_prob_fold(pos, self.traits[s], bet, pot, self.stacks[s], betting_round, board_texture, heads_up=heads_up)
+                # what it costs this opponent to call
+                call_cost = min(max(self.get_seat_contribution(seat) + bet - self.get_seat_contribution(s), 0), self.stacks[s])
+                pf = position_ranges.get_prob_fold(pos, self.traits[s], call_cost, pot_size + bet, self.stacks[s], betting_round, board_texture, heads_up=heads_up)
                 fold_probs.append(pf)
                 fold_by_seat[s] = pf
 
@@ -189,7 +181,6 @@ class PokerGame:
         bet_ratio = bet / pot
         scale_factor = 0.3 # arbitrary. how much tighter opponents will get with bet-sizing
         tightness = bet_ratio * scale_factor
-
 
         num_callers = max(1, round(callers_if_cont)) - num_all_in # excluding all-ins!
         likely = sorted(fold_by_seat, key=fold_by_seat.get)[:max(num_callers, 0)] # the seats of the callers
@@ -287,7 +278,6 @@ class PokerGame:
 
     def get_stack(self, seat):
         return self.stacks[seat]
-
 
     def get_pot(self):
         return self.pot.get_amount()
