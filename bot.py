@@ -48,7 +48,7 @@ class bot():
         # adjust ev_call based on volatility (variance)
         adjusted_ev_call = ev_call + random.uniform(-self.volatility * big_blind, self.volatility * big_blind) # scaling by big_blind
         # increase or decrease ev_call based on how loose a player is
-        adjusted_ev_call = adjusted_ev_call + (1.0 - self.looseness) * big_blind
+        adjusted_ev_call = adjusted_ev_call + (self.looseness - 1.0) * big_blind
         call_name = "check" if cost_to_call == 0 else "call"
         options.append([call_name, cost_to_call, adjusted_ev_call])
 
@@ -69,7 +69,7 @@ class bot():
                 # scale ev_raise by volatiility
                 adjusted_ev_raise = ev_raise + volatility_amount
                 # increase or decrease ev_raise based on how loose a player is
-                adjusted_ev_raise = adjusted_ev_raise + (1.0 - self.looseness) * big_blind     
+                adjusted_ev_raise = adjusted_ev_raise + (self.looseness - 1.0) * big_blind     
                 raise_options.append(["raise", bet, adjusted_ev_raise, adjusted_ev_raise])
 
             best_raise = max(raise_options, key=lambda option: option[2])
