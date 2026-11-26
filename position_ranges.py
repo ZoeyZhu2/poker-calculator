@@ -57,15 +57,25 @@ DECK = {"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "Tc", "Jc", "Qc", "Kc", 
 def get_range_hands(position: str, heads_up=False, looseness = 1.0, num_hands=1326):
     """Returns list of all hands in that percentile"""
     ranges = HEADS_UP_RANGES_PRE if heads_up else DEFAULT_RANGES_PRE
-    max_index = (int)(169 * ranges[position] * looseness)
-    if max_index > 169:
-        max_index = 169
-    if max_index < 1:
-        max_index = 1
-    top_hands = HAND_STRENGTH[0:max_index]
+    max_count = (int)(num_hands * ranges[position] * looseness)
+    if max_count > num_hands:
+        max_count = num_hands
+    if max_count < 1:
+        max_count = 1
+    current_index = 0
+    current_count = 0
     card_combos = []
-    for hand in top_hands:
+    while current_count < max_count:
+        hand = HAND_STRENGTH[current_index]
+        if len(hand) == 2:
+            stop = 6
+        elif hand[2] == "s":
+            stop = 4
+        else:
+            stop = 12
         card_combos.extend(hand_name_to_cards(hand))
+        current_count += stop
+        current_index += 1
     return card_combos
 
 def hand_name_to_cards(hand):
@@ -96,21 +106,26 @@ def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, boar
     # board texture
     # eventually add: action history (how strong the hand is likely to be/how likely they are to cont. bluffing)
     # position (early, middle, late)
-    bet_to_pot = bet / (pot_size + bet)
-    # the larger bet_to_pot, bthe more likely a player will fold. Using quadratic relationship for now. Can eventually tune
-    adjusted_bet_to_pot = bet_to_pot ** 2
-    bet_to_stack = bet / (stack_size)
-    # the larger the bet_to_stack, the higher prob of fold
+
+    if stack_size <= 0:
+        return 0
+
+    bet_to_pot = bet / (pot_size + bet)     # the larger bet_to_pot, the more likely a player will fold. 
+    pressure = min(bet_to_pot / 0.45, 1) # bet_to_pot is the equity needed to call; 0.45 is roughly a shove
+    bet_to_stack = min(bet / stack_size, 1)     # the larger the bet_to_stack, the higher prob of fold
+    pot_pressure_factor = 0.6 # needs tuning
+    stack_pressure_factor = 0.4 # needs tuning
+    total_pressure = pot_pressure_factor * pressure + stack_pressure_factor * bet_to_stack
 
     if betting_round == 0: # pre-flop
         ranges = HEADS_UP_RANGES_PRE if heads_up else DEFAULT_RANGES_PRE
         looseness = ranges[pos] * looseness
-        p_fold = (adjusted_bet_to_pot + bet_to_stack) * (1 - min(looseness, 1)) # super loose, then they won't fold
+        p_fold = total_pressure * (1 - min(looseness, 1)) # super loose, then they won't fold
 
     else:
         ranges = HEADS_UP_LOOSENESS_POST if heads_up else DEFAULT_LOOSENESS_POST
         looseness = ranges[pos] * looseness
-        p_fold = (adjusted_bet_to_pot + bet_to_stack + board_textures * 2) * (1 - looseness / 2) # /2 is arbitrary
+        p_fold = (total_pressure + board_textures * 2) * (1 - looseness / 2) # /2 is arbitrary
 
     p_fold = min(p_fold, 0.95)
     p_fold = max(0, p_fold)
@@ -124,7 +139,7 @@ def get_board_texture(board_cards):
     # will return a float between 0 and 1, with 0 being really dry and 1 being super wet
     # weighting 0.5 num same suit, 0.25 how closely clustered each card is, and 0.25 how many high cards there are
     if len(board_cards) == 0:
-        return -1
+        return 0
 
     num_of_suits = {"c": 0, "d": 0, "h": 0, "s": 0}
     num_of_cards = {2: 0, 3: 0, 4: 0, 5: 0, 6 : 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0}
