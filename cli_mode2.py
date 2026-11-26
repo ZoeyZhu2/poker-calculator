@@ -1,6 +1,7 @@
 import game
 from exceptions import QuitGame
 from exceptions import get_input
+import game_decision
 
 def main():
     try:
@@ -98,7 +99,7 @@ def update_action(poker_game, betting_round, seats_all_in=None):
     # betting_round: 0,1,2,3 for preflop, post flop, post turn, post river
     # seats_all_in is no longer needed as input (all-in = in the hand with a stack of 0), kept so the callers don't change
     seats_in = poker_game.get_seats_in()
-    current_equity = poker_game.get_equity()
+    current_equity = game_decision.get_equity(poker_game.to_snapshot())
     print(f"Current equity: {current_equity}")
 
     ring = poker_game.get_action_order(betting_round, set()) # everyone still in the hand, in action order
@@ -121,7 +122,7 @@ def update_action(poker_game, betting_round, seats_all_in=None):
         stack = poker_game.get_stack(seat)
 
         if seat == poker_game.get_own_seat():
-            print(f"Current EV to call: {poker_game.calculate_ev_call(current_equity, cost_to_call)}")
+            print(f"Current EV to call: {game_decision.calculate_ev_call(poker_game.to_snapshot(), current_equity, cost_to_call)}")
             while True:
                 bet = get_input("Enter how much you want to raise to calculate new EV. Enter 0 to stop.")
                 if bet.strip() == "0":
@@ -130,7 +131,7 @@ def update_action(poker_game, betting_round, seats_all_in=None):
                 if bet < cost_to_call:
                     print("You must input a higher number")
                     continue
-                print(f"Current EV to raise: {poker_game.calculate_ev_raise(bet, betting_round)}")
+                print(f"Current EV to raise: {game_decision.calculate_ev_raise(poker_game.to_snapshot(), bet, betting_round)}")
         while True:
             amount = int(get_input(f"How much did the player in seat {seat} put in? (any negative for fold, 0 for check): "))
             if amount < 0 or amount == stack: # fold, or all-in
@@ -144,7 +145,7 @@ def update_action(poker_game, betting_round, seats_all_in=None):
 
         if amount < 0:
             poker_game.fold_player(seat)
-            current_equity = poker_game.get_equity()
+            current_equity = game_decision.get_equity(poker_game.to_snapshot())
             print(f"Current equity: {current_equity}")
             if poker_game.get_num_in() == 1:
                 winner = next(s for s, value in seats_in.items() if value)
