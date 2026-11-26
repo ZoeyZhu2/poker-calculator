@@ -8,27 +8,35 @@ size, so results are exact and repeatable (no equity simulations). Run with:
 (also works under pytest, since every check is a test_* function).
 """
 import random
+from unittest import mock
 import bot
+import game_decision
 
 BB = 10
 POT = 100
 
 
 class StubGame:
-    """Stands in for PokerGame: bot.decision only calls calculate_ev_raise."""
+    """Stands in for PokerGame: bot.decision only needs a snapshot to hand to game_decision.
+
+    The snapshot is empty because the EV function is replaced (see decide) and never reads it."""
 
     def __init__(self, ev_fn):
         self.ev_fn = ev_fn
 
-    def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None, n_sims=1000):
-        return self.ev_fn(bet)
+    def to_snapshot(self):
+        return {}
 
 
 def decide(ev_fn, *, volatility=0.0, aggressiveness=0.0, looseness=1.0, bet_sizing=0.5,
            stack=1000, ev_call=0.0, pot=POT, cost_to_call=0, big_blind=BB):
     """Build a bot with the given traits and return its (action, amount)."""
     b = bot.bot(volatility, aggressiveness, looseness, bet_sizing)
-    return b.decision(StubGame(ev_fn), 1, ["Ah", "Kh"], stack, ev_call, 1, pot, cost_to_call, big_blind)
+    stub = StubGame(ev_fn)
+    # bot.decision calls game_decision.calculate_ev_raise(snapshot, bet, ...); make it a plain function of the bet
+    fake_ev_raise = lambda snapshot, bet, betting_round, seat=None, hand=None, n_sims=1000: ev_fn(bet)
+    with mock.patch.object(game_decision, "calculate_ev_raise", fake_ev_raise):
+        return b.decision(stub, 1, ["Ah", "Kh"], stack, ev_call, 1, pot, cost_to_call, big_blind)
 
 
 def peaked(center, height=50.0, slope=0.01):
