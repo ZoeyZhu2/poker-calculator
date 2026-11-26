@@ -1,7 +1,4 @@
-import position_ranges
-import equity_calculator
 import random
-import numpy as np
 import pot
 
 
@@ -31,16 +28,10 @@ class PokerGame:
         in_positions = [p for p in positions if p in self.get_active_positions(occupied_seats)]
         self.button_seat = occupied_seats[(occupied_seats.index(own_seat) - in_positions.index(self.own_pos)) % self.num_players]
         self.populate_positions(occupied_seats, self.button_seat)
-
         
     def update_traits(self, seat: int, looseness):
         self.traits[seat] = looseness
 
-    # getting range equities (so an estimation)
-    # wrapper function
-    def get_equity(self, seat=None, hand=None, n_sims=5000):
-        return self.get_bet_equity(tightness=0, seat=seat, hand=hand, n_sims=n_sims)
-    
     def fold_player(self, seat):
         self.seats_in[seat] = False
         self.num_in -= 1
@@ -134,110 +125,6 @@ class PokerGame:
                 continue
             action_order.append(pos)
         return [pos_to_seat[pos] for pos in action_order]
-
-    def calculate_ev_call(self, equity, cost_to_call):
-        return equity * (self.pot.get_amount() + cost_to_call) - cost_to_call
-
-    def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None, n_sims=1000):
-        # note: opponent reraise will be built later
-        # we are calculating aggregate ev and new_equity will be calculated based on all the remaining opponents' ranges
-        # p_call as it is is probability of continuining (so call and reraise included)
-        if seat is None:
-            seat = self.own_seat
-        if hand is None:
-            hand = self.own_hand
-        heads_up = self.num_players == 2
-        pot_size = self.pot.get_amount()
-        board_texture = position_ranges.get_board_texture(self.board_cards)
-        fold_probs = [] # one entry per opponent who still has chips behind
-        fold_by_seat = dict() # seat -> fold probability
-        all_in_seats = []
-        num_all_in = 0 # all-in opponents always continue
-        for s, value in self.seats_in.items():
-            if s == seat or not value:
-                continue
-            if self.stacks[s] == 0:
-                num_all_in += 1
-                all_in_seats.append(s)
-            else:
-                pos = self.rotation[s]
-                # what it costs this opponent to call
-                call_cost = min(max(self.get_seat_contribution(seat) + bet - self.get_seat_contribution(s), 0), self.stacks[s])
-                pf = position_ranges.get_prob_fold(pos, self.traits[s], call_cost, pot_size + bet, self.stacks[s], betting_round, board_texture, heads_up=heads_up)
-                fold_probs.append(pf)
-                fold_by_seat[s] = pf
-
-        # only win the pot uncontested if EVERY opponent folds
-        p_all_fold = 0 if num_all_in > 0 else 1
-        for pf in fold_probs:
-            p_all_fold *= pf
-        if p_all_fold == 1:
-            return pot_size
-        p_cont = 1 - p_all_fold # prob of round continuing
-        # expected callers overall, then divided by p_cont to get callers given that someone called
-        expected_callers = num_all_in + sum(1 - pf for pf in fold_probs)
-        callers_if_cont = expected_callers / p_cont # expected value removing the p_fold from the calculation
-
-        bet_ratio = bet / pot_size
-        scale_factor = 0.3 # arbitrary. how much tighter opponents will get with bet-sizing
-        tightness = bet_ratio * scale_factor
-
-        num_callers = max(1, round(callers_if_cont)) - num_all_in # excluding all-ins!
-        likely = sorted(fold_by_seat, key=fold_by_seat.get)[:max(num_callers, 0)] # the seats of the callers
-        continuing = set(all_in_seats) | set(likely) # this is now all the callers
-        new_equity = self.get_bet_equity(tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing) # only calculate equity against continuing players
-
-        ev = p_all_fold * pot_size + p_cont * (new_equity * (pot_size + (callers_if_cont + 1) * bet) - bet)
-        return ev
-
-
-    def get_bet_equity(self, tightness=0, seat=None, hand=None,n_sims=1000,only_seats=None):
-        if seat is None:
-            seat = self.own_seat
-        if hand is None:
-            hand = self.own_hand
-        heads_up = self.num_players == 2
-        dead = set(hand) | set(self.board_cards)
-        ranges = dict() # position -> all unblocked range hands
-        for key, value in self.seats_in.items():
-            if key == seat or (only_seats is not None and key not in only_seats):
-                continue
-            if value is True:
-                pos = self.rotation[key]
-                looseness = max(self.traits[key]-tightness, 0)
-                while True:
-                    range_hands = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
-                    live = [c for c in range_hands if c[0] not in dead and c[1] not in dead]
-                    if len(live) >= 6 or looseness > 3: # arbitrary live and arbitrary looseness cutoff
-                        break
-                    looseness += 0.05 # widening looseness until a possible card ischosen
-                ranges[pos] = live
-        equities_sum = np.zeros(len(ranges) + 1)
-        completed = 0
-        for i in range(n_sims):
-            pocket_list = [hand]
-            selected_cards = set(dead)
-            all_dealt = True
-            for key, value in ranges.items():
-                dealt = False
-                for _ in range(50):
-                    random_cards = random.choice(value)
-                    card1, card2 = random_cards
-                    if card1 not in selected_cards and card2 not in selected_cards:
-                        dealt = True
-                        break
-                if not dealt:
-                    all_dealt = False
-                    break
-                selected_cards.add(card1)
-                selected_cards.add(card2)
-                pocket_list.append(random_cards)
-            if all_dealt:
-                equity_list = equity_calculator.calculate_equity(pocket_list, self.board_cards, 1)
-                equities_sum = equities_sum + np.array(equity_list)
-                completed += 1
-        avg_equities = equities_sum / max(completed, 1)
-        return avg_equities[0]
 
     def post_blinds(self, small_blind, big_blind):
         heads_up = len(self.occupied_seats) == 2
