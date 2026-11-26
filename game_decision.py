@@ -34,6 +34,7 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     board_texture = position_ranges.get_board_texture(board_cards)
     fold_probs = [] # one entry per opponent who still has chips behind
     fold_by_seat = dict() # seat -> fold probability
+    call_cost_by_seat = dict() # seat -> chips opponent adds if they call
     all_in_seats = []
     num_all_in = 0 # all-in opponents always continue
     for s, value in seats_in.items():
@@ -49,6 +50,7 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
             pf = position_ranges.get_prob_fold(pos, traits[s], call_cost, pot_size + bet, stacks[s], betting_round, board_texture, heads_up=heads_up)
             fold_probs.append(pf)
             fold_by_seat[s] = pf
+            call_cost_by_seat[s] = call_cost
 
     # only win the pot uncontested if EVERY opponent folds
     p_all_fold = 0 if num_all_in > 0 else 1
@@ -70,7 +72,11 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     continuing = set(all_in_seats) | set(likely) # this is now all the callers
     new_equity = get_bet_equity(snapshot, tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing) # only calculate equity against continuing players
 
-    ev = p_all_fold * pot_size + p_cont * (new_equity * (pot_size + (callers_if_cont + 1) * bet) - bet)
+    # expected chips callers add, given the round continues. all-in opponents add nothing (their chips are already in the pot)
+    # and short stacks add only what they can actually call
+    expected_call_chips = sum((1 - fold_by_seat[s]) * call_cost_by_seat[s] for s in fold_by_seat) / p_cont
+
+    ev = p_all_fold * pot_size + p_cont * (new_equity * (pot_size + bet + expected_call_chips) - bet)
     return ev
 
 
