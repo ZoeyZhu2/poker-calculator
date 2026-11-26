@@ -28,6 +28,7 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     contributions = snapshot["contributions"]
     seats_in = snapshot["seats_in"]
     stacks = snapshot["stacks"]
+    bet = min(bet, stacks[seat])
     rotation = snapshot["rotation"]
     traits = snapshot["traits"]
     board_texture = position_ranges.get_board_texture(board_cards)
@@ -81,6 +82,7 @@ def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=100
     heads_up = snapshot["num_players"] == 2
     board_cards = snapshot["board_cards"]
     seats_in = snapshot["seats_in"]
+    stacks = snapshot["stacks"]
     rotation = snapshot["rotation"]
     traits = snapshot["traits"]
     dead = set(hand) | set(board_cards)
@@ -90,14 +92,17 @@ def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=100
             continue
         if value:
             pos = rotation[key]
-            looseness = max(traits[key]-tightness, 0)
+            if stacks[key] == 0:
+                looseness = traits[key]
+            else:
+                looseness = max(traits[key]-tightness, 0)
             while True:
                 range_hands = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
                 live = [c for c in range_hands if c[0] not in dead and c[1] not in dead]
                 if len(live) >= 6: # arbitrary live cutoff
                     break
                 looseness += 0.05 # widening looseness until a possible card is chosen
-            ranges[pos] = live
+            ranges[key] = live
     equities_sum = np.zeros(len(ranges) + 1)
     completed = 0
     for i in range(n_sims):
@@ -122,5 +127,8 @@ def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=100
             equity_list = equity_calculator.calculate_equity(pocket_list, board_cards, 1)
             equities_sum = equities_sum + np.array(equity_list)
             completed += 1
-    avg_equities = equities_sum / max(completed, 1)
+    if completed == 0:
+        range_sizes = {seat_key: len(hands) for seat_key, hands in ranges.items()}
+        raise RuntimeError(f"No simulations completed: could not deal non-overlapping hands to all opponents (live range sizes by seat: {range_sizes})")
+    avg_equities = equities_sum / completed
     return avg_equities[0]
