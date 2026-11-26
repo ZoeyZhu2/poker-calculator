@@ -76,7 +76,16 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     # and short stacks add only what they can actually call
     expected_call_chips = sum((1 - fold_by_seat[s]) * call_cost_by_seat[s] for s in fold_by_seat) / p_cont
 
-    ev = p_all_fold * pot_size + p_cont * (new_equity * (pot_size + bet + expected_call_chips) - bet)
+    # any part of the bet that no continuing opponent can match is returned to us, so we only risk what can be matched
+    matchable = []
+    for s in continuing:
+        if s in call_cost_by_seat:
+            matchable.append(contributions[s] + call_cost_by_seat[s] - contributions[seat])
+        else: # all-in opponent: their total commitment is already fixed
+            matchable.append(contributions[s] - contributions[seat])
+    effective_bet = min(bet, max(max(matchable), 0))
+
+    ev = p_all_fold * pot_size + p_cont * (new_equity * (pot_size + effective_bet + expected_call_chips) - effective_bet)
     return ev
 
 
