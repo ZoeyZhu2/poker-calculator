@@ -1,3 +1,4 @@
+import cli_mode1
 import cli_mode2
 from exceptions import QuitGame
 from exceptions import get_input
@@ -11,7 +12,7 @@ def main():
                 cli_mode2.main()
                 break
             if mode == "1":
-                pass
+                cli_mode1.main()
                 break
         except QuitGame:
             print("Quitting game")
