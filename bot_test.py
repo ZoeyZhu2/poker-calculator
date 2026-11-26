@@ -6,8 +6,14 @@
 For exact pass/fail logic tests of bot.decision, see test.py (uses a stub game).
 """
 import sys
+from unittest import mock
 import game
 import bot
+import game_decision
+
+# bot.decision calls game_decision.calculate_ev_raise by module attribute, so the sweep swaps in a
+# caching version while a decision runs. Keep a handle on the real one for the cache to call.
+_real_calculate_ev_raise = game_decision.calculate_ev_raise
 
 SMALL_BLIND = 100
 BIG_BLIND = 200
@@ -91,7 +97,7 @@ def ev_scan():
                 pot = pg.get_pot()
                 bets = sorted({max(int(p * pot), min_raise) for p in (0.5, 1.0)} | {STACK})
                 evs = ", ".join(
-                    f"{bet}: {pg.calculate_ev_raise(bet, rnd, 1, hand, n_sims=N_SIMS):8.1f}" for bet in bets
+                    f"{bet}: {game_decision.calculate_ev_raise(pg.to_snapshot(), bet, rnd, 1, hand, n_sims=N_SIMS):8.1f}" for bet in bets
                 )
                 print(f"{num_players}p  {' '.join(hand)}  {board_name:<22} pot={pot:<5} {evs}")
 
@@ -100,16 +106,23 @@ def ev_scan():
 
 class CachedGame:
     """Wraps a PokerGame and remembers raise EVs, so every trait setting sees the same numbers.
-    Without this, simulation noise between runs can swamp the effect of the trait being swept."""
+    Without this, simulation noise between runs can swamp the effect of the trait being swept.
+
+    bot.decision asks the game for a snapshot (to_snapshot) and passes it to
+    game_decision.calculate_ev_raise. run_situation patches that function with
+    self.calculate_ev_raise below, so the cache sits in between."""
 
     def __init__(self, pg):
         self.pg = pg
         self.cache = {}
 
-    def calculate_ev_raise(self, bet, betting_round, seat=None, hand=None, n_sims=N_SIMS):
+    def to_snapshot(self):
+        return self.pg.to_snapshot()
+
+    def calculate_ev_raise(self, snapshot, bet, betting_round, seat=None, hand=None, n_sims=N_SIMS):
         key = (bet, betting_round, seat, tuple(hand) if hand else None)
         if key not in self.cache:
-            self.cache[key] = self.pg.calculate_ev_raise(bet, betting_round, seat, hand, n_sims=n_sims)
+            self.cache[key] = _real_calculate_ev_raise(snapshot, bet, betting_round, seat, hand, n_sims=n_sims)
         return self.cache[key]
 
 
@@ -125,8 +138,8 @@ def build_situations():
             for facing in (False, True):
                 pg = make_game(hand, board, 4, raised_pot=bool(board), facing_bet=FACING_BET if facing else 0)
                 cost = pg.get_max_contribution() - pg.get_seat_contribution(1)
-                equity = pg.get_equity(seat=1, hand=hand, n_sims=N_SIMS)
-                ev_call = pg.calculate_ev_call(equity, cost)
+                equity = game_decision.get_equity(pg.to_snapshot(), seat=1, hand=hand, n_sims=N_SIMS)
+                ev_call = game_decision.calculate_ev_call(pg.to_snapshot(), equity, cost)
                 label = f"{' '.join(hand)} | {board_name} | {'facing bet' if facing else 'no bet'}"
                 situations.append((label, CachedGame(pg), hand, betting_round_for(board), ev_call, cost))
     return situations
@@ -138,7 +151,8 @@ def run_situation(trait, value, situation):
     traits[trait] = value
     b = bot.bot(**traits)
     pg = cg.pg
-    action, amount = b.decision(cg, 1, hand, pg.get_stack(1), ev_call, rnd, pg.get_pot(), cost, BIG_BLIND)
+    with mock.patch.object(game_decision, "calculate_ev_raise", cg.calculate_ev_raise):
+        action, amount = b.decision(cg, 1, hand, pg.get_stack(1), ev_call, rnd, pg.get_pot(), cost, BIG_BLIND)
     return action, amount
 
 

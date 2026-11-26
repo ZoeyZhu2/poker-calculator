@@ -24,6 +24,7 @@ if os.environ.get("PYTHONHASHSEED") != "0":
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 import game
+import game_decision
 
 BASELINE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "baseline.json")
 N_SIMS = 200
@@ -35,15 +36,15 @@ N_SIMS = 200
 # call game_decision.<function>) and leave the rest of the file alone.
 # ---------------------------------------------------------------------------
 def ev_raise(g, bet, betting_round, seat=None, hand=None):
-    return g.calculate_ev_raise(bet, betting_round, seat, hand, n_sims=N_SIMS)
+    return game_decision.calculate_ev_raise(g.to_snapshot(), bet, betting_round, seat, hand, n_sims=N_SIMS)
 
 
 def ev_call(g, equity_value, cost_to_call):
-    return g.calculate_ev_call(equity_value, cost_to_call)
+    return game_decision.calculate_ev_call(g.to_snapshot(), equity_value, cost_to_call)
 
 
 def equity(g, seat=None, hand=None):
-    return g.get_equity(seat=seat, hand=hand, n_sims=N_SIMS)
+    return game_decision.get_equity(g.to_snapshot(), seat=seat, hand=hand, n_sims=N_SIMS)
 
 
 # ---------------------------------------------------------------------------

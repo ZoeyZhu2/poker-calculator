@@ -1,4 +1,5 @@
 import random
+import game_decision
 
 class bot():
 
@@ -65,7 +66,7 @@ class bot():
             raise_options = []
             volatility_amount = random.uniform(-self.volatility * big_blind, self.volatility * big_blind)
             for bet in sorted(bet_sizes):
-                ev_raise = game.calculate_ev_raise(bet, betting_round, seat, hand)
+                ev_raise = game_decision.calculate_ev_raise(game.to_snapshot(), bet, betting_round, seat, hand)
                 # scale ev_raise by volatiility
                 adjusted_ev_raise = ev_raise + volatility_amount
                 # increase or decrease ev_raise based on how loose a player is
