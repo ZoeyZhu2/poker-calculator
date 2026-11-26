@@ -1,8 +1,6 @@
-calibrate bot's calculate_ev_raise tightness stuff
-
-
+move decision math out of game.py
+calibrate get_board_texture formula coefficients and bots via testing with a solver
 make a GUI with streamlit for everything to see it instead of only cli being available
-calibrate get_board_texture formula coefficients via testing with a solver
 
 
 eventually migrate to a tech stack 
