@@ -67,14 +67,8 @@ def get_range_hands(position: str, heads_up=False, looseness = 1.0, num_hands=13
     card_combos = []
     while current_count < max_count:
         hand = HAND_STRENGTH[current_index]
-        if len(hand) == 2:
-            stop = 6
-        elif hand[2] == "s":
-            stop = 4
-        else:
-            stop = 12
-        card_combos.extend(hand_name_to_cards(hand))
-        current_count += stop
+        card_combos.extend(HAND_COMBOS[hand])
+        current_count += len(HAND_COMBOS[hand])
         current_index += 1
     return card_combos
 
@@ -94,6 +88,8 @@ def hand_name_to_cards(hand):
                 if suit1 != suit2:
                     cards.append([hand[0] + suit1, hand[1] + suit2])
     return cards
+
+HAND_COMBOS = {hand: hand_name_to_cards(hand) for hand in HAND_STRENGTH}
 
 def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, board_textures, heads_up=False):
     # pos is a string
