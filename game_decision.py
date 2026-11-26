@@ -76,7 +76,7 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     # and short stacks add only what they can actually call
     expected_call_chips = sum((1 - fold_by_seat[s]) * call_cost_by_seat[s] for s in fold_by_seat) / p_cont
 
-    # any part of the bet that no continuing opponent can match is returned to us, so we only risk what can be matched
+    # any part of the bet that no continuing opponent can match is returned
     matchable = []
     for s in continuing:
         if s in call_cost_by_seat:
