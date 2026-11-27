@@ -38,7 +38,7 @@ def main():
             big_blind = int(get_input("What do you want big blind to be?"))
         small_blind = int(get_input("What do you want small blind to be?"))
         while small_blind <= 0 or small_blind > big_blind:
-            small_blind = int(get_input("What do you want big blind to be?"))
+            small_blind = int(get_input("What do you want small blind to be?"))
         stacks = dict() # seat -> stack_size
         for i in range (1, num_players + 1):
             stacks[i] = stack_size
@@ -120,7 +120,7 @@ def main():
                 print(f"The player in seat {seat} wins: {poker_game.get_pot()}")
             
             next_round = get_input("Next round (Y/N): ").strip()
-            if next_round == "N":
+            if next_round == "N" or next_round == "n":
                 break
 
             game_deck = deck.Deck()
