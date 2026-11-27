@@ -1,5 +1,5 @@
 from exceptions import QuitGame
-from exceptions import get_input
+from exceptions import get_input, get_int, get_yn
 import game
 import bot
 import random
@@ -9,10 +9,7 @@ import game_decision
 def main():
     try:
         print("At any point, input q or quit to quit.")
-        num_players = int(get_input("How many players are playing (including you)? Enter a digit 2-9: "))
-        while num_players < 2 or num_players > 9:
-            print("Please enter a different number.")
-            num_players = int(get_input("How many players are playing (including you)? Enter a digit 2-9: "))
+        num_players = get_int("How many players are playing (including you)? Enter a digit 2-9: ", 2, 9)
     
         # creating bots
         bots = list()
@@ -20,25 +17,17 @@ def main():
             volatility = None
             aggressiveness = None
             looseness = None
-            customize = get_input("Would you like to customize this bot (Y/N)? ")
-            if customize.lower() == "y":
-                volatile = get_input("How volatile do you want this bot to be (enter integer 0-5): ")
-                volatility = 0.2 * int(volatile.strip())
-                aggressive = get_input("How aggressive do you want this bot to be (enter integer 0-5): ")
-                aggressiveness = 0.2 * int(aggressive.strip())
-                loose = get_input("How loose do you want this bot to be (enter integer 1-5; 3 is normal, 1 is super tight, 5 is super loose): ")
-                looseness = 0.5 + int(loose.strip()) * 0.25
+            if get_yn("Would you like to customize this bot (Y/N)? "):
+                volatility = 0.2 * get_int("How volatile do you want this bot to be (enter integer 0-5): ", 0, 5)
+                aggressiveness = 0.2 * get_int("How aggressive do you want this bot to be (enter integer 0-5): ", 0, 5)
+                looseness = 0.5 + get_int("How loose do you want this bot to be (enter integer 1-5; 3 is normal, 1 is super tight, 5 is super loose): ", 1, 5) * 0.25
             new_bot = bot.bot(volatility, aggressiveness, looseness)
             bots.append(new_bot)
 
         # setting stack sizes and big_blinds
-        stack_size = int(get_input("What do you want initial stack size to be?"))
-        big_blind = int(get_input("What do you want big blind to be?"))
-        while big_blind > stack_size or big_blind <= 0:
-            big_blind = int(get_input("What do you want big blind to be?"))
-        small_blind = int(get_input("What do you want small blind to be?"))
-        while small_blind <= 0 or small_blind > big_blind:
-            small_blind = int(get_input("What do you want small blind to be?"))
+        stack_size = get_int("What do you want initial stack size to be?", 1)
+        big_blind = get_int("What do you want big blind to be?", 1, stack_size)
+        small_blind = get_int("What do you want small blind to be?", 1, big_blind)
         stacks = dict() # seat -> stack_size
         for i in range (1, num_players + 1):
             stacks[i] = stack_size
@@ -119,8 +108,7 @@ def main():
                 poker_game.award_directly(seat)
                 print(f"The player in seat {seat} wins: {poker_game.get_pot()}")
             
-            next_round = get_input("Next round (Y/N): ").strip()
-            if next_round == "N" or next_round == "n":
+            if not get_yn("Next round (Y/N): "):
                 break
 
             game_deck = deck.Deck()
@@ -171,16 +159,15 @@ def update_action(poker_game, betting_round, player_seats, player_hands, small_b
         if seat == poker_game.get_own_seat():
             print(f"Current EV to call: {game_decision.calculate_ev_call(poker_game.to_snapshot(), current_equity, cost_to_call)}")
             while True:
-                bet = get_input("Enter how much you want to raise to calculate new EV. Enter 0 to stop.")
-                if bet.strip() == "0":
+                bet = get_int("Enter how much you want to raise to calculate new EV. Enter 0 to stop.", 0)
+                if bet == 0:
                     break
-                bet = int(bet)
                 if bet < cost_to_call:
                     print("You must input a higher number")
                     continue
                 print(f"Current EV to raise: {game_decision.calculate_ev_raise(poker_game.to_snapshot(), bet, betting_round)}")
             while True:
-                amount = int(get_input("How much do you bet? (any negative for fold): "))
+                amount = get_int("How much do you bet? (any negative for fold): ")
                 if amount < 0 or amount == stack: # fold, or all-in (always legal)
                     break
                 if amount > stack:
