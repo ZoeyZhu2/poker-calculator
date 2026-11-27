@@ -1,48 +1,64 @@
 import game
 from exceptions import QuitGame
-from exceptions import get_input
+from exceptions import get_input, get_int, get_yn, get_cards
 import game_decision
+
+def ask_position():
+    while True:
+        pos = get_input("Your position (format: BTN, SB, BB, UTG, UTG+1, UTG+2, LJ, HJ, CO): ").strip().upper()
+        if pos in game.positions:
+            return pos
+        print(f"Please enter one of: {', '.join(game.positions)}")
+
+def ask_stacks(seats):
+    return {seat: get_int(f"What is the stack size of the player at seat {seat} (format: 100)? ", 1) for seat in seats}
+
+def ask_seats():
+    # returns own_seat, occupied_seats (sorted, includes own seat), stacks
+    own_seat = get_int("Your seat (1, 2, 3, 4, 5, 6, 7, 8, 9): ", 1, 9)
+    while True:
+        text = get_input("All occupied seats incl. your own (format:1234): ").strip()
+        seats = sorted({int(ch) for ch in text if ch in "123456789"})
+        if len(seats) != len(text) or len(seats) < 2:
+            print("Please enter 2 or more different seat digits 1-9, like 1234.")
+        elif own_seat not in seats:
+            print(f"Your own seat ({own_seat}) must be in the list.")
+        else:
+            return own_seat, seats, ask_stacks(seats)
 
 def main():
     try:
-        own_hand_str = get_input("Your hand (format: AhKd): ")
-        own_hand = list()
-        for i in range(0, len(own_hand_str), 2):
-            own_hand.append(own_hand_str[i:i+2])
-        own_pos = get_input("Your position (format: BTN, SB, BB, UTG, UTG+1, UTG+2, LJ, HJ, CO): ")
-        own_seat = int(get_input("Your seat (1, 2, 3, 4, 5, 6, 7, 8, 9): "))
-        occupied_seats_str = get_input("All occupied seats incl. your own (format:1234): ")
-        occupied_seats = list()
-        stacks = dict()
-        for i in range(0, len(occupied_seats_str)):
-            curr_seat = int(occupied_seats_str[i:i+1])
-            occupied_seats.append(curr_seat)
-            curr_stack = int(get_input(f"What is the stack size of the player at seat {curr_seat} (format: 100)? "))
-            stacks[curr_seat] = curr_stack                 
-        poker_game = game.PokerGame(own_hand, own_seat, occupied_seats, stacks, [], own_pos)
-        small_blind = int(get_input("Small blind: "))
-        big_blind = int(get_input("Big blind: "))
+        own_hand = get_cards("Your hand (format: AhKd): ", 2)
+        own_pos = ask_position()
+        own_seat, occupied_seats, stacks = ask_seats()
+        while True:
+            try:
+                poker_game = game.PokerGame(own_hand, own_seat, occupied_seats, stacks, [], own_pos)
+                break
+            except ValueError: # the position doesn't exist at a table this size
+                print(f"There is no {own_pos} with {len(occupied_seats)} players.")
+                own_pos = ask_position()
+        small_blind = get_int("Small blind: ", 1)
+        big_blind = get_int("Big blind: ", small_blind)
+
+        def dealt(): # cards already known, which can't come again
+            return poker_game.board_cards + poker_game.own_hand
 
         while True:
             poker_game.post_blinds(small_blind, big_blind)
             num_in, seats_all_in, seat = update_action(poker_game, 0)
 
             if num_in > 1:
-                board_cards_str = get_input("Flop dealt (format: AhKdQs): ")
-                for i in range(0, len(board_cards_str),2):
-                    poker_game.add_board_card(board_cards_str[i:i+2])
-                
+                for card in get_cards("Flop dealt (format: AhKdQs): ", 3, dealt()):
+                    poker_game.add_board_card(card)
                 num_in, seats_all_in, seat = update_action(poker_game, 1, seats_all_in)
 
             if num_in > 1:
-                board_card = get_input("Turn dealt (format: Ah): ")
-                poker_game.add_board_card(board_card)
-
+                poker_game.add_board_card(get_cards("Turn dealt (format: Ah): ", 1, dealt())[0])
                 num_in, seats_all_in, seat = update_action(poker_game, 2, seats_all_in)
 
             if num_in > 1:
-                board_card = get_input("River dealt: (format: Ah)")
-                poker_game.add_board_card(board_card)
+                poker_game.add_board_card(get_cards("River dealt: (format: Ah)", 1, dealt())[0])
                 num_in, seats_all_in, seat = update_action(poker_game, 3, seats_all_in)
 
             if num_in != 1:
@@ -51,45 +67,27 @@ def main():
                 player_cards = {} # seat -> showdown hand
                 for seat, value in seats_in.items():
                     if value:
-                        cards_str = get_input(f"Input seat {seat}'s hand (format: AhKd). If mucked, just hit enter. : ")
-                        cards_str = cards_str.strip()
-                        cards = [cards_str[:2], cards_str[2:]]
-                        player_cards[seat] = cards
+                        known = poker_game.board_cards + [c for cards in player_cards.values() for c in cards]
+                        if seat != poker_game.get_own_seat(): # your own hand is allowed to be re-entered
+                            known += poker_game.own_hand
+                        cards = get_cards(f"Input seat {seat}'s hand (format: AhKd). If mucked, just hit enter. : ", 2, known, allow_empty=True)
+                        player_cards[seat] = cards or ["", ""]
                 poker_game.get_payout(player_cards)
             else:
                 poker_game.award_directly(seat)
             
-            next_round = get_input("Next round (Y/N): ").strip()
-            if next_round == "N":
+            if not get_yn("Next round (Y/N): "):
                 break
-            change_seat = get_input("Did seats change? (Y/N): ")
-            if change_seat == "Y":
-                own_seat = int(get_input("Your seat (1, 2, 3, 4, 5, 6, 7, 8, 9): "))
-                occupied_seats_str = get_input("All occupied seats incl. your own (format:1234): ")
-                occupied_seats = list()
-                stacks = dict()
-                for i in range(0, len(occupied_seats_str)):
-                    curr_seat = int(occupied_seats_str[i:i+1])
-                    occupied_seats.append(curr_seat)
-                    curr_stack = int(get_input(f"What is the stack size of the player at seat {curr_seat} (format: 100)? "))
-                    stacks[curr_seat] = curr_stack       
-            else: 
-                own_pos = poker_game.get_own_pos()
-                own_seat =  poker_game.get_own_seat()
+            if get_yn("Did seats change? (Y/N): "):
+                own_seat, occupied_seats, stacks = ask_seats()
+            else:
+                own_seat = poker_game.get_own_seat()
                 occupied_seats = poker_game.get_occupied_seats()
-                change_stack = get_input("Did stacks change outside of gameplay? (Y/N): ")
-                if change_stack == "Y":
-                    stacks = dict()
-                    for i in range(0, len(occupied_seats_str)):
-                        curr_seat = int(occupied_seats_str[i:i+1])
-                        curr_stack = int(get_input(f"What is the stack size of the player at seat {curr_seat} (format: 100)? "))
-                        stacks[curr_seat] = curr_stack  
+                stacks = poker_game.get_stacks()
+                if get_yn("Did stacks change outside of gameplay? (Y/N): "):
+                    stacks = ask_stacks(occupied_seats)
 
-            own_hand_str = get_input("Your hand (format: AhKd): ")
-            own_hand = list()
-            for i in range(0, len(own_hand_str), 2):
-                own_hand.append(own_hand_str[i:i+2])
-
+            own_hand = get_cards("Your hand (format: AhKd): ", 2)
             poker_game.new_round(own_hand, occupied_seats, own_seat, stacks)
     except QuitGame:
         print("Quitting game")
@@ -124,16 +122,15 @@ def update_action(poker_game, betting_round, seats_all_in=None):
         if seat == poker_game.get_own_seat():
             print(f"Current EV to call: {game_decision.calculate_ev_call(poker_game.to_snapshot(), current_equity, cost_to_call)}")
             while True:
-                bet = get_input("Enter how much you want to raise to calculate new EV. Enter 0 to stop.")
-                if bet.strip() == "0":
+                bet = get_int("Enter how much you want to raise to calculate new EV. Enter 0 to stop.", 0)
+                if bet == 0:
                     break
-                bet = int(bet)
                 if bet < cost_to_call:
                     print("You must input a higher number")
                     continue
                 print(f"Current EV to raise: {game_decision.calculate_ev_raise(poker_game.to_snapshot(), bet, betting_round)}")
         while True:
-            amount = int(get_input(f"How much did the player in seat {seat} put in? (any negative for fold, 0 for check): "))
+            amount = get_int(f"How much did the player in seat {seat} put in? (any negative for fold, 0 for check): ")
             if amount < 0 or amount == stack: # fold, or all-in
                 break
             if amount > stack:
