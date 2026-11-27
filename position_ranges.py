@@ -91,6 +91,16 @@ def hand_name_to_cards(hand):
 
 HAND_COMBOS = {hand: hand_name_to_cards(hand) for hand in HAND_STRENGTH}
 
+# placeholder constants for get_prob_fold (all need tuning)
+SHOVE_POT_ODDS = 0.6 # bet_to_pot value that counts as maximum pot pressure (roughly a shove)
+POT_PRESSURE_WEIGHT = 0.6 # preflop: weight on pot pressure
+STACK_PRESSURE_WEIGHT = 0.4 # preflop: weight on bet size relative to their stack
+STACK_FACTOR_WEIGHT = 0.25 # postflop: extra folding when the bet is a big part of their stack (0 = ignore stack size)
+TEXTURE_FACTOR_BASE = 1.1 # postflop: texture factor at texture 0 (a perfectly dry board)
+TEXTURE_FACTOR_WEIGHT = 0.5 # postflop: how much a wetter board reduces folding (dry ~1.0, wet ~0.8)
+NEVER_FOLD_LOOSENESS = 2 # postflop: looseness at or above this never folds; looseness 1 is neutral
+MAX_PROB_FOLD = 0.95 # nobody folds more often than this
+
 def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, board_textures, heads_up=False):
     # pos is a string
     # looseness, board_textures are floats between 0 and 1
@@ -107,11 +117,9 @@ def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, boar
         return 0
 
     bet_to_pot = bet / (pot_size + bet)     # the larger bet_to_pot, the more likely a player will fold. 
-    pressure = min(bet_to_pot / 0.45, 1) # bet_to_pot is the equity needed to call; 0.45 is roughly a shove
+    pressure = min(bet_to_pot / SHOVE_POT_ODDS, 1) # bet_to_pot is the equity needed to call; SHOVE_POT_ODDS is roughly a shove
     bet_to_stack = min(bet / stack_size, 1)     # the larger the bet_to_stack, the higher prob of fold
-    pot_pressure_factor = 0.6 # needs tuning
-    stack_pressure_factor = 0.4 # needs tuning
-    total_pressure = pot_pressure_factor * pressure + stack_pressure_factor * bet_to_stack
+    total_pressure = POT_PRESSURE_WEIGHT * pressure + STACK_PRESSURE_WEIGHT * bet_to_stack
 
     if betting_round == 0: # pre-flop
         ranges = HEADS_UP_RANGES_PRE if heads_up else DEFAULT_RANGES_PRE
@@ -121,10 +129,17 @@ def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, boar
     else:
         ranges = HEADS_UP_LOOSENESS_POST if heads_up else DEFAULT_LOOSENESS_POST
         looseness = ranges[pos] * looseness
-        # wetter boards connect with more hands (pairs, draws), so opponents fold less. 0.5 is arbitrary
-        p_fold = total_pressure * (1 - 0.5 * board_textures) * (1 - looseness / 2) # /2 is arbitrary
+        # baseline fold frequency from minimum defense frequency (MDF). facing a bet of b into a pot of p, a player must continue
+        # at least p / (p + b) of the time, or a pure bluff profits automatically. so the most they can fold without being
+        # bluffed profitably is b / (p + b). pot_size here already includes our bet, so that is bet / pot_size
+        baseline_fold_freq = bet / max(pot_size, 1)
+        
+        stack_factor = 1 + STACK_FACTOR_WEIGHT * bet_to_stack # a bet that is a big part of their stack is scarier
+        texture_factor = TEXTURE_FACTOR_BASE - TEXTURE_FACTOR_WEIGHT * board_textures # wetter boards connect with more hands, so fewer folds
+        looseness_factor = max(0, NEVER_FOLD_LOOSENESS - looseness) # looseness ~1 is neutral; looser (>1) folds less
+        p_fold = baseline_fold_freq * stack_factor * texture_factor * looseness_factor
 
-    p_fold = min(p_fold, 0.95)
+    p_fold = min(p_fold, MAX_PROB_FOLD)
     p_fold = max(0, p_fold)
 
     return p_fold
