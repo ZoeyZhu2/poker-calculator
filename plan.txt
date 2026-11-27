@@ -1,4 +1,5 @@
-move decision math out of game.py
+fix cli_mode1
+fix cli_mode2
 calibrate get_board_texture formula coefficients and bots via testing with a solver
 make a GUI with streamlit for everything to see it instead of only cli being available
 
