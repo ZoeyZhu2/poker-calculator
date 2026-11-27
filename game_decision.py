@@ -4,6 +4,40 @@ import position_ranges
 import numpy as np
 import random
 import equity_calculator
+import evaluation
+import math
+
+MIN_LIVE_HANDS = 6 # smallest range we allow an opponent to have after blockers/filters
+
+def has_draw(combo, board_cards):
+    # flush draw (4 to a suit using at least one hole card) or straight draw (4 of 5 ranks in a window, open-ended or gutshot,
+    # using at least one hole card). only meaningful before the river.
+    hole = [evaluation.parse_card(c) for c in combo]
+    board = [evaluation.parse_card(c) for c in board_cards]
+    allcards = hole + board
+    for suit in "cdhs":
+        if sum(1 for _, s in allcards if s == suit) == 4 and any(s == suit for _, s in hole):
+            return True
+    hole_ranks = {r for r, _ in hole} | ({1} if any(r == 14 for r, _ in hole) else set())
+    ranks = {r for r, _ in allcards} | ({1} if any(r == 14 for r, _ in allcards) else set()) # ace also plays low
+    for low in range(1, 11):
+        window = set(range(low, low + 5))
+        present = window & ranks
+        if len(present) == 4 and present & hole_ranks:
+            return True
+    return False
+
+def board_strength_key(combo, board):
+    # made hand strength; unpaired hands with a draw rank just below the weakest pair
+    made = evaluation.evaluate_from_seven(list(combo) + board)
+    if len(board) < 5 and made[0] == 0 and has_draw(combo, board):
+        return (1, 0) + tuple(made[1:])
+    return made
+
+def rank_by_board_strength(hands, board_cards):
+    # strongest to weakest on the current board (works for flop/turn/river), counting draws before the river
+    board = list(board_cards)
+    return sorted(hands, key=lambda c: board_strength_key(c, board), reverse=True)
 
 # getting range equities (so an estimation)
 # wrapper function
@@ -70,7 +104,7 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     num_callers = max(1, round(callers_if_cont)) - num_all_in # excluding all-ins!
     likely = sorted(fold_by_seat, key=fold_by_seat.get)[:max(num_callers, 0)] # the seats of the callers
     continuing = set(all_in_seats) | set(likely) # this is now all the callers
-    new_equity = get_bet_equity(snapshot, tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing) # only calculate equity against continuing players
+    new_equity = get_bet_equity(snapshot, tightness=tightness, seat=seat, hand=hand, n_sims=n_sims, only_seats=continuing, fold_by_seat=fold_by_seat) # only calculate equity against continuing players
 
     # expected chips callers add, given the round continues. all-in opponents add nothing (their chips are already in the pot)
     # and short stacks add only what they can actually call
@@ -89,7 +123,9 @@ def calculate_ev_raise(snapshot: dict, bet, betting_round, seat=None, hand=None,
     return ev
 
 
-def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=1000, only_seats=None):
+def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=1000, only_seats=None, fold_by_seat=None):
+    # fold_by_seat: seat -> prob that opponent folds to our bet. Postflop, a continuing opponent keeps only the
+    # strongest (1 - fold prob) share of their range on this board, which replaces the tightness shortcut for them.
     if seat is None:
         seat = snapshot["own_seat"]
     if hand is None:
@@ -107,16 +143,21 @@ def get_bet_equity(snapshot: dict, tightness=0, seat=None, hand=None, n_sims=100
             continue
         if value:
             pos = rotation[key]
-            if stacks[key] == 0:
+            # postflop with a known fold probability: filter by board strength instead of tightening
+            board_filter = len(board_cards) > 0 and fold_by_seat is not None and key in fold_by_seat and stacks[key] != 0
+            if stacks[key] == 0 or board_filter:
                 looseness = traits[key]
             else:
                 looseness = max(traits[key]-tightness, 0)
             while True:
                 range_hands = position_ranges.get_range_hands(pos, heads_up=heads_up, looseness=looseness)
                 live = [c for c in range_hands if c[0] not in dead and c[1] not in dead]
-                if len(live) >= 6: # arbitrary live cutoff
+                if len(live) >= MIN_LIVE_HANDS: # arbitrary live cutoff
                     break
                 looseness += 0.05 # widening looseness until a possible card is chosen
+            if board_filter:
+                keep = max(MIN_LIVE_HANDS, math.ceil((1 - fold_by_seat[key]) * len(live)))
+                live = rank_by_board_strength(live, board_cards)[:keep]
             ranges[key] = live
     equities_sum = np.zeros(len(ranges) + 1)
     completed = 0

@@ -121,7 +121,8 @@ def get_prob_fold(pos, looseness, bet, pot_size, stack_size, betting_round, boar
     else:
         ranges = HEADS_UP_LOOSENESS_POST if heads_up else DEFAULT_LOOSENESS_POST
         looseness = ranges[pos] * looseness
-        p_fold = (total_pressure + board_textures * 2) * (1 - looseness / 2) # /2 is arbitrary
+        # wetter boards connect with more hands (pairs, draws), so opponents fold less. 0.5 is arbitrary
+        p_fold = total_pressure * (1 - 0.5 * board_textures) * (1 - looseness / 2) # /2 is arbitrary
 
     p_fold = min(p_fold, 0.95)
     p_fold = max(0, p_fold)
