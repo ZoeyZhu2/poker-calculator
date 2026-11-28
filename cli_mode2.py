@@ -61,7 +61,7 @@ def main():
                 num_in, seats_all_in, seat = update_action(poker_game, 2, seats_all_in)
 
             if num_in > 1:
-                poker_game.add_board_card(get_cards("River dealt: (format: Ah)", 1, dealt())[0])
+                poker_game.add_board_card(get_cards("River dealt (format: Ah): ", 1, dealt())[0])
                 num_in, seats_all_in, seat = update_action(poker_game, 3, seats_all_in)
 
             if num_in != 1:
@@ -70,14 +70,18 @@ def main():
                 player_cards = {} # seat -> showdown hand
                 for seat, value in seats_in.items():
                     if value:
-                        known = poker_game.board_cards + [c for cards in player_cards.values() for c in cards]
-                        if seat != poker_game.get_own_seat(): # your own hand is allowed to be re-entered
-                            known += poker_game.own_hand
+                        if seat == poker_game.get_own_seat(): # you already know your own hand
+                            player_cards[seat] = poker_game.own_hand
+                            continue
+                        known = poker_game.board_cards + poker_game.own_hand + [c for cards in player_cards.values() for c in cards]
                         cards = get_cards(f"Input seat {seat}'s hand (format: AhKd). If mucked, just hit enter. : ", 2, known, allow_empty=True)
                         player_cards[seat] = cards or ["", ""]
-                poker_game.get_payout(player_cards)
+                payouts = poker_game.get_payout(player_cards)
+                for seat, payout in payouts.items():
+                    print(f"The player in seat {seat} wins: {payout}")
             else:
                 poker_game.award_directly(seat)
+                print(f"The player in seat {seat} wins: {poker_game.get_pot()}")
 
             stacks = poker_game.get_stacks()
             if get_yn("Did stacks change outside of gameplay? (Y/N): "):
@@ -134,7 +138,7 @@ def update_action(poker_game, betting_round, seats_all_in=None):
         if seat == poker_game.get_own_seat():
             print(f"Current EV to call: {game_decision.calculate_ev_call(poker_game.to_snapshot(), current_equity, cost_to_call)}")
             while True:
-                bet = get_int("Enter how much you want to raise to calculate new EV. Enter 0 to stop.", 0)
+                bet = get_int("Enter how much you want to raise to calculate new EV. Enter 0 to stop. ", 0)
                 if bet == 0:
                     break
                 if bet < cost_to_call:
