@@ -5,11 +5,14 @@ class QuitGame(Exception):
         pass
 
 def get_input(msg):
-    ans = input(msg)
-    if ans.strip().lower() == "q" or ans.strip().lower() == "quit":
+    try:
+        ans = input(msg)
+        if ans.strip().lower() == "q" or ans.strip().lower() == "quit":
+            raise QuitGame()
+        else:
+            return ans
+    except(KeyboardInterrupt, EOFError):
         raise QuitGame()
-    else:
-        return ans
 
 # The helpers below keep asking until the answer is valid (q still quits).
 
