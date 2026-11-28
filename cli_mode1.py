@@ -107,14 +107,6 @@ def main():
             else:
                 poker_game.award_directly(seat)
                 print(f"The player in seat {seat} wins: {poker_game.get_pot()}")
-            
-            if not get_yn("Next round (Y/N): "):
-                break
-
-            game_deck = deck.Deck()
-            own_hand = []
-            own_hand.append(game_deck.deal_card())
-            own_hand.append(game_deck.deal_card())
 
             stacks = poker_game.get_stacks()
             occupied_seats = [s for s in occupied_seats if stacks[s] > 0]
@@ -124,6 +116,15 @@ def main():
             if len(occupied_seats) == 1:
                 print("You win!")
                 break
+            
+            if not get_yn("Next round (Y/N): "):
+                break
+
+            game_deck = deck.Deck()
+            own_hand = []
+            own_hand.append(game_deck.deal_card())
+            own_hand.append(game_deck.deal_card())
+
             poker_game.new_round(own_hand, occupied_seats, player_seat, stacks)
     
     except QuitGame:
