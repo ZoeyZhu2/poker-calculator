@@ -8,12 +8,15 @@ def main():
     while True:
         try:
             mode = get_input("Mode 1 or 2: ")
+            mode = mode.strip()
             if mode == "2":
                 cli_mode2.main()
                 break
             if mode == "1":
                 cli_mode1.main()
                 break
+            else:
+                print("Input 1 or 2")
         except QuitGame:
             print("Quitting game")
             return
