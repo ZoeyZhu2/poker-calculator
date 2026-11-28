@@ -10,7 +10,10 @@ def ask_position():
             return pos
         print(f"Please enter one of: {', '.join(game.positions)}")
 
-def ask_stacks(seats):
+def ask_stacks(seats, allow_left=False):
+    # allow_left: 0 is accepted and means the player left the table
+    if allow_left:
+        return {seat: get_int(f"What is the stack size of the player at seat {seat} (format: 100; 0 if they left)? ", 0) for seat in seats}
     return {seat: get_int(f"What is the stack size of the player at seat {seat} (format: 100)? ", 1) for seat in seats}
 
 def ask_seats():
@@ -75,18 +78,27 @@ def main():
                 poker_game.get_payout(player_cards)
             else:
                 poker_game.award_directly(seat)
+
+            stacks = poker_game.get_stacks()
+            if get_yn("Did stacks change outside of gameplay? (Y/N): "):
+                stacks = ask_stacks(occupied_seats, allow_left=True)
+
+            occupied_seats = [s for s in occupied_seats if stacks[s] > 0]
+            own_seat = poker_game.get_own_seat()
+
+            if own_seat not in occupied_seats:
+                print("You're out of chips. Game over.")
+                break
+            if len(occupied_seats) == 1:
+                print("You win!")
+                break
             
             if not get_yn("Next round (Y/N): "):
                 break
             if get_yn("Did seats change? (Y/N): "):
                 own_seat, occupied_seats, stacks = ask_seats()
-            else:
-                own_seat = poker_game.get_own_seat()
-                occupied_seats = poker_game.get_occupied_seats()
-                stacks = poker_game.get_stacks()
-                if get_yn("Did stacks change outside of gameplay? (Y/N): "):
-                    stacks = ask_stacks(occupied_seats)
 
+           
             own_hand = get_cards("Your hand (format: AhKd): ", 2)
             poker_game.new_round(own_hand, occupied_seats, own_seat, stacks)
     except QuitGame:
