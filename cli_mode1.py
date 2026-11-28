@@ -25,9 +25,9 @@ def main():
             bots.append(new_bot)
 
         # setting stack sizes and big_blinds
-        stack_size = get_int("What do you want initial stack size to be?", 1)
-        big_blind = get_int("What do you want big blind to be?", 1, stack_size)
-        small_blind = get_int("What do you want small blind to be?", 1, big_blind)
+        stack_size = get_int("What do you want initial stack size to be? ", 1)
+        big_blind = get_int("What do you want big blind to be? ", 1, stack_size)
+        small_blind = get_int("What do you want small blind to be? ", 1, big_blind)
         stacks = dict() # seat -> stack_size
         for i in range (1, num_players + 1):
             stacks[i] = stack_size
@@ -160,7 +160,7 @@ def update_action(poker_game, betting_round, player_seats, player_hands, small_b
         if seat == poker_game.get_own_seat():
             print(f"Current EV to call: {game_decision.calculate_ev_call(poker_game.to_snapshot(), current_equity, cost_to_call)}")
             while True:
-                bet = get_int("Enter how much you want to raise to calculate new EV. Enter 0 to stop.", 0)
+                bet = get_int("Enter how much you want to raise to calculate new EV. Enter 0 to stop. ", 0)
                 if bet == 0:
                     break
                 if bet < cost_to_call:
